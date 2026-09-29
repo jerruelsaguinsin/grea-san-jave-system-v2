@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grea San Jave — Module 12: Feedback &amp; Ratings</title>
+<link rel="stylesheet" href="../anika/css/anika.css">
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand-text">Grea <span class="secondary">San</span> <span class="accent">Jave</span> Printing Services</div>
+    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+      <nav class="page-nav">
+        <a href="promotions_Management.html">Promotions</a>
+        <a href="customer_Dashboard.html">Customer Dashboard</a>
+        <a href="customer_Feedback.html" class="active">Customer Feedback</a>
+      </nav>
+      <div class="customer-switcher">
+        <label for="customerSwitcher" class="customer-switcher-label" style="margin:0;">Viewing as:</label>
+        <select id="customerSwitcher"></select>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <h1 class="page-title">Customer Feedback &amp; Ratings</h1>
+
+    <div class="card">
+      <h2 class="card-title">Orders Eligible for Feedback</h2>
+      <div id="feedbackEligibleList"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Your Feedback History
+        <small>Average rating you've given: <span id="avgRatingDisplay"></span></small>
+      </h2>
+      <div id="feedbackHistoryList"></div>
+    </div>
+  </main>
+
+  <script src="customer_Feedback.js"></script>
+</body>
+</html>

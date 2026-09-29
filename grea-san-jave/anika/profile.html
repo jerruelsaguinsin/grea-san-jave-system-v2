@@ -13,18 +13,19 @@
     <header class="app-header">
         <div class="brand"><img src="../grea_logo.jpg" alt="Grea San Jave logo"><span class="brand-text"><span
                     class="secondary">Grea</span> San <span class="accent">Jave</span></span></div>
-        <nav class="app-nav"><a id="dashboardNav" href="#">Dashboard</a><a id="customerNav" href="customer-list.html"
+        <nav class="app-nav"><a class="sidebar-create-order" href="customer-dashboard.html#create-order">Create Order</a><a id="dashboardNav" href="#">Dashboard</a><a id="customerNav" href="customer-list.html"
                 style="display:none">Customers</a><a id="adminNav" href="account-management.html"
                 style="display:none">Account Management</a><a id="auditNav" href="activity-log.html"
                 style="display:none">Audit Trail</a><a href="profile.html" class="active">My
-                Profile</a></nav>
+                Profile</a><a href="customer-dashboard.html#my-orders" class="sidebar-my-orders">My Orders</a></nav>
         <div class="session-info"><span id="currentUserLabel"></span><button id="logoutBtn"
                 class="btn btn-secondary btn-small">Log Out</button></div>
     </header>
     <main>
-        <h1 class="page-title">My Profile</h1>
+        <h1 class="dashboard-welcome">My Profile</h1>
         <div class="card">
             <form id="profileForm">
+                <h2 class="card-title">Personal Information</h2>
                 <div class="form-row">
                     <div class="form-group"><label for="profileName">Name</label><input id="profileName" type="text"
                             required>
@@ -36,16 +37,30 @@
                     </div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label for="profileEmail">Email</label><input id="profileEmail" type="email"
-                            required>
-                        <div class="field-error" id="profileEmailError"></div>
+                    <div class="form-group" id="contactNumberGroup"><label for="profileContactNumber">Contact Number</label><input
+                            id="profileContactNumber" type="tel" inputmode="numeric" maxlength="11" placeholder="09XXXXXXXXX">
+                        <div class="field-error" id="profileContactNumberError"></div>
                     </div>
-                    <div class="form-group" id="messengerGroup"><label for="profileMessenger">Messenger
-                            Handle</label><input id="profileMessenger" type="text">
+                    <div class="form-group"><label for="profileEmail">Email</label><input id="profileEmail" type="email">
+                        <div class="field-error" id="profileEmailError"></div>
+                        <div class="field-hint" id="profileEmailHint">Optional for customer accounts.</div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" id="messengerGroup"><label for="profileMessenger">Messenger Handle</label><input
+                            id="profileMessenger" type="text">
                         <div class="field-error" id="profileMessengerError"></div>
                     </div>
                 </div><button class="btn btn-primary" type="submit">Save Profile</button>
             </form>
+        </div>
+        <div class="card" id="customerAccountSummary" hidden>
+            <h2 class="card-title">Customer Account</h2>
+            <div class="form-row">
+                <div class="form-group"><span class="profile-summary-label">Membership</span><strong class="profile-summary-value" id="profileMembershipStatus"></strong></div>
+                <div class="form-group"><span class="profile-summary-label">Email verification</span><strong class="profile-summary-value" id="profileEmailStatus"></strong></div>
+                <div class="form-group"><span class="profile-summary-label">Customer since</span><strong class="profile-summary-value" id="profileRegisteredDate"></strong></div>
+            </div>
         </div>
         <div class="card">
             <h2 class="card-title">Change Password</h2>
@@ -59,7 +74,7 @@
                     </div>
                     <div class="form-group"><label for="confirmPassword">Confirm New Password</label><input
                             id="confirmPassword" type="password" required></div>
-                </div><button class="btn btn-secondary" type="submit">Change Password</button>
+                </div><button class="btn btn-primary" type="submit">Change Password</button>
             </form>
             <div id="passwordOtpPanel" class="card" style="display:none; margin-top:1rem;">
                 <h3 class="card-title">Verify Password Change</h3>

@@ -15,107 +15,104 @@
     <span class="brand-text"><span class="secondary">Grea</span> San <span class="accent">Jave</span></span>
   </div>
   <nav class="app-nav">
-    <a href="customer-dashboard.html" class="active">Dashboard</a>
-    <a href="profile.html">My Profile</a>
+    <button type="button" id="showOrderPlacementBtn" class="app-nav-btn sidebar-create-order">Create Order</button>
+    <a href="customer-dashboard.html" id="dashboardHomeLink" class="active">Dashboard</a>
+    <button type="button" id="showCustomerProfileBtn" class="app-nav-btn">My Profile</button>
+    <button type="button" id="showCustomerOrdersBtn" class="app-nav-btn sidebar-my-orders">My Orders</button>
   </nav>
   <div class="session-info">
-    <span id="currentUserLabelCustomer"></span>
+    <div class="session-user-actions">
+      <span id="currentUserLabelCustomer"></span>
+      <button type="button" id="customerNotificationBell" class="notification-bell-button" aria-controls="customerNotificationPanel" aria-expanded="false" aria-label="Notifications, 0 unread" title="Notifications">
+        <svg class="notification-bell-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+          <path d="M10 21h4" />
+        </svg>
+        <span id="customerNotificationCount" class="notification-count" hidden>0</span>
+      </button>
+    </div>
     <button type="button" id="logoutBtnCustomer" class="btn btn-secondary btn-small">Log Out</button>
   </div>
 </header>
 
-<main>
-  <h1 class="dashboard-welcome" id="customerWelcome">Welcome back!</h1>
-  <p class="page-subtitle">Your account, at a glance.</p>
-
-  <div class="stat-grid">
-    <div class="stat-card">
-      <div class="stat-value" id="statMembership">—</div>
-      <div class="stat-label">Membership Status</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value" id="statEmailVerified">—</div>
-      <div class="stat-label">Email Verification</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value" id="statDateRegistered">—</div>
-      <div class="stat-label">Customer Since</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value" id="statAccountStatus">—</div>
-      <div class="stat-label">Account Status</div>
-    </div>
-  </div>
-
-  <div class="dashboard-columns order-workspace">
-    <div class="card">
-      <h2 class="card-title">Place an Order</h2>
-      <p class="field-hint order-intro">Create a mock order to preview the customer ordering flow.</p>
-      <form id="customerOrderForm">
-        <div class="form-group">
-          <label for="orderServiceType">Service</label>
-          <select id="orderServiceType" required>
-            <option value="">Choose a service</option>
-            <option value="Document Printing">Document Printing</option>
-            <option value="Bookbinding">Bookbinding</option>
-          </select>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="orderPages">Pages</label>
-            <input id="orderPages" type="number" min="1" max="1000" placeholder="e.g. 25" required />
-          </div>
-          <div class="form-group">
-            <label for="orderCopies">Copies</label>
-            <input id="orderCopies" type="number" min="1" max="100" value="1" required />
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="orderColorTier">Print style</label>
-            <select id="orderColorTier" required>
-              <option value="Black Text">Black Text</option>
-              <option value="Minimal Color">Minimal Color</option>
-              <option value="Small Image">Small Image</option>
-              <option value="Full Color">Full Color</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="orderBinding">Binding</label>
-            <select id="orderBinding" required>
-              <option value="None">None</option>
-              <option value="Spiral Binding">Spiral Binding</option>
-              <option value="Perfect Binding">Perfect Binding</option>
-              <option value="Lamination">Lamination</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="orderNotes">Notes <span class="field-hint">(optional)</span></label>
-          <textarea id="orderNotes" rows="3" maxlength="240" placeholder="Add any instructions for the shop..."></textarea>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block">Place Mock Order</button>
-      </form>
-    </div>
-
+<section id="customerNotificationPanel" class="notification-panel" aria-labelledby="customerNotificationTitle" hidden>
+  <div class="notification-panel-header">
     <div>
+      <h2 id="customerNotificationTitle">Notifications</h2>
+      <p id="customerNotificationSummary">Unread updates</p>
+    </div>
+    <button type="button" id="closeCustomerNotifications" class="notification-close" aria-label="Close notifications">&times;</button>
+  </div>
+  <button type="button" id="markAllCustomerNotificationsRead" class="btn btn-secondary btn-small">Mark all as read</button>
+  <ul id="customerNotificationList" class="notification-list" aria-live="polite"></ul>
+</section>
+
+<main>
+  <div id="dashboardOverview">
+    <h1 class="dashboard-welcome" id="customerWelcome">Welcome back!</h1>
+    <p class="page-subtitle">Your account, at a glance.</p>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="statMembership">—</div>
+        <div class="stat-label">Membership Status</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statEmailVerified">—</div>
+        <div class="stat-label">Email Verification</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statDateRegistered">—</div>
+        <div class="stat-label">Customer Since</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statAccountStatus">—</div>
+        <div class="stat-label">Account Status</div>
+      </div>
+    </div>
+
+    <div class="dashboard-columns order-workspace">
       <div class="card">
-        <h2 class="card-title">Track My Orders</h2>
+        <div class="customer-section-heading">
+          <h2 class="card-title">Track My Orders</h2>
+          <button type="button" id="viewAllCustomerOrdersBtn" class="btn btn-secondary btn-small">View all orders</button>
+        </div>
         <div id="customerOrders" class="order-list"></div>
       </div>
       <div class="card">
-        <h2 class="card-title">How Order Status Works</h2>
-        <p class="field-hint" style="margin-top:0;">Once you place an order, it moves through these stages:</p>
-        <ul class="status-track" id="orderStatusTrack"></ul>
+        <h2 class="card-title">Active Promotions</h2>
+        <ul id="customerPromotions" class="customer-promo-list"></ul>
       </div>
     </div>
   </div>
 
-  <div class="card">
-    <h2 class="card-title">My Recent Activity</h2>
-    <div class="activity-feed" id="customerActivityFeed"></div>
-  </div>
+  <section id="customerProfileSection" class="customer-profile-view" hidden></section>
+
+  <section id="myOrdersSection" class="tracking-view" hidden>
+    <h1 class="dashboard-welcome">My Orders</h1>
+
+    <nav class="order-tracking-tabs" aria-label="Order status filters">
+      <button type="button" class="order-tracking-tab active" data-order-tab="all">All <span id="trackingCountAll">0</span></button>
+      <button type="button" class="order-tracking-tab" data-order-tab="processing">Processing <span id="trackingCountProcessing">0</span></button>
+      <button type="button" class="order-tracking-tab" data-order-tab="ready">Ready for Claiming <span id="trackingCountReady">0</span></button>
+      <button type="button" class="order-tracking-tab" data-order-tab="completed">Completed <span id="trackingCountCompleted">0</span></button>
+      <button type="button" class="order-tracking-tab" data-order-tab="cancelled">Cancelled <span id="trackingCountCancelled">0</span></button>
+    </nav>
+    <div id="myOrdersList" class="tracking-order-list" aria-live="polite"></div>
+  </section>
+
+  <div id="orderPlacementSection" hidden></div>
 </main>
+
+<div id="trackingModalBackdrop" class="tracking-modal-backdrop" hidden>
+  <section class="tracking-modal" role="dialog" aria-modal="true" aria-labelledby="trackingModalTitle" tabindex="-1">
+    <div class="tracking-modal-header">
+      <h2 id="trackingModalTitle">Order Details</h2>
+      <button type="button" id="trackingModalClose" aria-label="Close order details">&times;</button>
+    </div>
+    <div id="trackingModalContent"></div>
+  </section>
+</div>
 
 <script src="js/constants.js"></script>
 <script src="js/utils.js"></script>
@@ -123,6 +120,13 @@
 <script src="js/activityLog.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/dashboardCommon.js"></script>
+<script src="js/notifications.js"></script>
+<script src="js/profile.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="js/emailService.js"></script>
+<script src="js/profilePage.js"></script>
 <script src="js/customerDashboard.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="../../jerr/order-placement-page.js"></script>
 </body>
 </html>

@@ -24,13 +24,21 @@ function initProfilePage() {
       ")"
     : currentUser.customerName + " (Customer)";
 
-  document.getElementById("currentUserLabel").textContent = currentUserLabel;
-  document.getElementById("dashboardNav").href = getDashboardUrlForCurrentUser();
+  let currentUserLabelElement = document.getElementById("currentUserLabel");
+  if (currentUserLabelElement) currentUserLabelElement.textContent = currentUserLabel;
+  let dashboardNav = document.getElementById("dashboardNav");
+  if (dashboardNav) dashboardNav.href = getDashboardUrlForCurrentUser();
   document.getElementById("profileName").value = isStaff
     ? currentUser.fullName
     : currentUser.customerName;
   document.getElementById("profileUsername").value = currentUser.username;
   document.getElementById("profileEmail").value = currentUser.email || "";
+  document.getElementById("profileEmail").required = isStaff;
+  document.getElementById("profileEmailHint").hidden = isStaff;
+  document.getElementById("contactNumberGroup").hidden = isStaff;
+  if (!isStaff) {
+    document.getElementById("profileContactNumber").value = currentUser.contactNumber || "";
+  }
   document.getElementById("profileMessenger").value = isStaff
     ? ""
     : currentUser.messengerHandle || "";
@@ -38,20 +46,41 @@ function initProfilePage() {
     ? "none"
     : "block";
 
+  let customerAccountSummary = document.getElementById("customerAccountSummary");
+  if (customerAccountSummary) {
+    customerAccountSummary.hidden = isStaff;
+    if (!isStaff) {
+      document.getElementById("profileMembershipStatus").textContent = currentUser.isRegular
+        ? "Suki customer"
+        : "Standard customer";
+      document.getElementById("profileEmailStatus").textContent = isBlank(currentUser.email)
+        ? "No email on file"
+        : currentUser.isEmailVerified
+          ? "Verified"
+          : "Not verified";
+      document.getElementById("profileRegisteredDate").textContent = currentUser.dateRegistered || "—";
+    }
+  }
+
   if (isStaff && currentUser.role === USER_ROLES.CO_OWNER) {
-    document.getElementById("adminNav").style.display = "inline-block";
-    document.getElementById("auditNav").style.display = "inline-block";
+    let adminNav = document.getElementById("adminNav");
+    let auditNav = document.getElementById("auditNav");
+    if (adminNav) adminNav.style.display = "inline-block";
+    if (auditNav) auditNav.style.display = "inline-block";
   }
   if (isStaff && currentUser.role === USER_ROLES.STAFF) {
-    document.getElementById("customerNav").style.display = "inline-block";
+    let customerNav = document.getElementById("customerNav");
+    if (customerNav) customerNav.style.display = "inline-block";
   }
 
   document.getElementById("profileForm").addEventListener("submit", function (e) {
-    e.preventDefault(); clearFieldErrors(["profileName", "profileUsername", "profileEmail"]);
+    e.preventDefault();
+    clearFieldErrors(["profileName", "profileUsername", "profileEmail", "profileContactNumber"]);
     let result = updateOwnProfile({
       name: document.getElementById("profileName").value,
       username: document.getElementById("profileUsername").value,
       email: document.getElementById("profileEmail").value,
+      contactNumber: isStaff ? "" : document.getElementById("profileContactNumber").value,
       messengerHandle: document.getElementById("profileMessenger").value,
     });
 
@@ -61,6 +90,7 @@ function initProfilePage() {
           name: "Name",
           username: "Username",
           email: "Email",
+          contactNumber: "ContactNumber",
           messengerHandle: "Messenger",
         };
         for (let field in result.errors) {
@@ -75,13 +105,34 @@ function initProfilePage() {
       return;
     }
 
-    showToast("Profile updated successfully.", "success");
-    document.getElementById("currentUserLabel").textContent = isStaff
-      ? currentUser.fullName +
-        " (" +
-        (currentUser.role === USER_ROLES.CO_OWNER ? "Co-Owner" : "Staff") +
-        ")"
-      : currentUser.customerName + " (Customer)";
+    showToast(
+      result.emailChanged && !isBlank(currentUser.email)
+        ? "Profile saved. Verify your updated email the next time you sign in."
+        : "Profile updated successfully.",
+      "success"
+    );
+    if (currentUserLabelElement) {
+      currentUserLabelElement.textContent = isStaff
+        ? currentUser.fullName +
+          " (" +
+          (currentUser.role === USER_ROLES.CO_OWNER ? "Co-Owner" : "Staff") +
+          ")"
+        : currentUser.customerName + " (Customer)";
+    }
+    if (!isStaff) {
+      document.getElementById("profileEmailHint").textContent =
+        result.emailChanged && !isBlank(currentUser.email)
+          ? "Verify this address the next time you sign in."
+          : "Optional for customer accounts.";
+      document.getElementById("profileMembershipStatus").textContent = currentUser.isRegular
+        ? "Suki customer"
+        : "Standard customer";
+      document.getElementById("profileEmailStatus").textContent = isBlank(currentUser.email)
+        ? "No email on file"
+        : currentUser.isEmailVerified
+          ? "Verified"
+          : "Not verified";
+    }
   });
 
   let pendingPasswordChange = null;
@@ -98,12 +149,6 @@ function initProfilePage() {
 
   document.getElementById("passwordForm").addEventListener("submit", function (e) {
     e.preventDefault();
-
-    if (!currentUser.email || !isValidEmailFormat(currentUser.email)) {
-      showToast("A registered email is required to change your password.", "error");
-      return;
-    }
-
     let currentPassword = document.getElementById("currentPassword").value;
     let newPassword = document.getElementById("newPassword").value;
     let confirmPassword = document.getElementById("confirmPassword").value;
@@ -114,6 +159,21 @@ function initProfilePage() {
     );
     if (!validation.success) {
       showToast(validation.message, "error");
+      return;
+    }
+
+    if (isBlank(currentUser.email)) {
+      let result = changeOwnPassword(currentPassword, newPassword, confirmPassword);
+      if (!result.success) {
+        showToast(result.message, "error");
+        return;
+      }
+      document.getElementById("passwordForm").reset();
+      showToast("Password changed successfully.", "success");
+      return;
+    }
+    if (!isValidEmailFormat(currentUser.email)) {
+      showToast("Add a valid email to receive password verification codes.", "error");
       return;
     }
 
@@ -190,10 +250,15 @@ function initProfilePage() {
     hidePasswordOtpPanel();
   });
 
-  document.getElementById("logoutBtn").addEventListener("click", function () {
-    logoutCurrentUser();
-    window.location.href = "login-signup.html";
-  });
+  let profileLogoutButton = document.getElementById("logoutBtn");
+  if (profileLogoutButton) {
+    profileLogoutButton.addEventListener("click", function () {
+      logoutCurrentUser();
+      window.location.href = "login-signup.html";
+    });
+  }
 }
 
-document.addEventListener("DOMContentLoaded", initProfilePage);
+document.addEventListener("DOMContentLoaded", function () {
+  if (document.getElementById("profileForm")) initProfilePage();
+});

@@ -1,0 +1,192 @@
+// constants.js
+// Shared constants for the 16-module Grea San Jave Printing Services system.
+// Import these into any module instead of retyping raw strings.
+// Grounded in the client interview where noted; flagged as PLACEHOLDER where
+// the interview didn't specify an exact value — confirm with the client
+// before building real logic against a placeholder.
+
+// ===== Module 5: Order Management =====
+
+// Q1 — the two main services the shop offers.
+export const SERVICE_TYPES = {
+  DOCUMENT_PRINTING: "Document Printing",
+  BOOKBINDING: "Bookbinding",
+};
+
+// Sub-options under each serviceType.
+export const SERVICE_OPTIONS = {
+  SPIRAL_BINDING: "Spiral Binding",
+  PERFECT_BINDING: "Perfect Binding",
+  LAMINATION: "Lamination",
+  NONE: "None",
+};
+
+// Q15 — colorTier pricing: minimal color = 5/page, small image = 10/page,
+// full color / no white space = 20/page, black text only = 3/page.
+export const COLOR_TIERS = {
+  BLACK_TEXT: "Black Text",
+  MINIMAL_COLOR: "Minimal Color",
+  SMALL_IMAGE: "Small Image",
+  FULL_COLOR: "Full Color",
+};
+
+export const PRICE_PER_PAGE = {
+  [COLOR_TIERS.BLACK_TEXT]: 3,
+  [COLOR_TIERS.MINIMAL_COLOR]: 5,
+  [COLOR_TIERS.SMALL_IMAGE]: 10,
+  [COLOR_TIERS.FULL_COLOR]: 20,
+};
+
+// Q6 — how customers submit files (also used by Module 4: File Handling).
+export const ORDER_CHANNELS = {
+  MESSENGER: "Messenger",
+  EMAIL: "Email",
+  IN_PERSON: "In Person",
+  BLUETOOTH: "Bluetooth",
+  CUSTOMER_PORTAL: "Customer Portal", // NEW — self-service upload via Module 14
+};
+
+// Q9, Q11, Q13 — two lanes: walk-in (FIFO) and advance/rush.
+export const QUEUE_TYPES = {
+  WALK_IN: "walkIn",
+  ADVANCE: "advance",
+};
+
+// UI-facing priority scale, layered on top of Order.isRush (Boolean).
+// isRush stays the source of truth for queue-lane assignment; this is for
+// display/sort emphasis within the rush lane only.
+// PLACEHOLDER — not from the interview; confirm with client before Order
+// Management builds real sorting logic against it.
+export const PRIORITY_LEVEL = {
+  HIGH: "high",
+  MEDIUM: "medium",
+  LOW: "low",
+};
+
+// Order lifecycle states (Q9, Q32).
+export const ORDER_STATUS = {
+  QUEUED: "queued",
+  PRINTING: "printing",
+  DONE: "done",
+  UNCLAIMED: "unclaimed",       // Q32 — customer didn't show up
+  CANCELLED: "cancelled",       // Q32 — e.g. cancelled classes
+};
+
+// Module 5 — days after dateCompleted before an order counts as "unclaimed
+// enough to alert on." PLACEHOLDER — confirm actual number with client.
+export const UNCLAIMED_THRESHOLD_DAYS = 3;
+
+// ===== Module 6: Inventory Management =====
+
+// Q25 — materials regularly monitored.
+export const INVENTORY_CATEGORIES = {
+  BOND_PAPER: "Bond Paper",
+  PHOTO_PAPER: "Photo Paper",
+  SPECIALTY_PAPER: "Specialty Paper",
+  INK_TONER: "Ink/Toner",
+  BINDING_MATERIALS: "Binding Materials",
+  LAMINATION_MATERIALS: "Lamination Materials",
+};
+
+// ===== Module 7: Payments & Receipts =====
+
+// Q17 — accepted payment methods.
+export const PAYMENT_METHODS = {
+  CASH: "Cash",
+  GCASH: "GCash",
+  BANK_TRANSFER: "Bank Transfer",
+};
+
+// Payment state per order (no refund tracking exists per Q18, but system
+// should at least track paid vs. pending vs. down payment).
+export const PAYMENT_STATUS = {
+  PENDING: "pending",
+  DOWN_PAYMENT_PAID: "downPaymentPaid",
+  FULLY_PAID: "fullyPaid",
+};
+
+// ===== Module 9: Expense Management =====
+// PLACEHOLDER — not from the interview (client discussed revenue tracking,
+// never a separate expense log). Confirm actual categories with client.
+export const EXPENSE_CATEGORIES = {
+  RENT: "Rent",
+  UTILITIES: "Utilities",
+  SUPPLIES: "Supplies",
+  EQUIPMENT_REPAIR: "Equipment Repair",
+  OTHER: "Other",
+};
+
+// ===== Module 10: Promotions & Discount Management =====
+// PLACEHOLDER — the interview only implies discounts exist ("hindi
+// discounted" in Q15); no specific promo rules were given.
+export const PROMO_TYPES = {
+  BULK_DISCOUNT: "Bulk Discount",
+  REGULAR_CUSTOMER_DISCOUNT: "Regular Customer Discount", // ties to Customer.isRegular
+  SEASONAL_PROMO: "Seasonal Promo",
+};
+
+export const DISCOUNT_TYPE = {
+  PERCENTAGE: "percentage",
+  FIXED_AMOUNT: "fixedAmount",
+};
+
+export const PROMO_ELIGIBILITY = {
+  ALL_CUSTOMERS: "allCustomers",
+  SUKI_ONLY: "sukiOnly",
+  BULK_ORDER_ONLY: "bulkOrderOnly",
+};
+
+// Module 13 (Customer Account) / Module 2 (Staff Account Management) —
+// automated suki (regular customer) detection threshold.
+// PLACEHOLDER — confirm actual order count with client.
+export const SUKI_ORDER_THRESHOLD = 5;
+
+// ===== Module 2: Account Management (staff side) =====
+
+// Business profile — 2 co-owners split duties (Q13: one handles rush, one walk-ins).
+export const USER_ROLES = {
+  CO_OWNER: "coOwner",
+  STAFF: "staff",
+};
+
+export const DUTY_ASSIGNMENT = {
+  RUSH: "rush",
+  WALK_IN: "walkIn",
+  BOTH: "both",
+};
+
+// ===== Module 3: Activity Log / Audit Trail =====
+
+// Distinguishes who performed a logged action — a staff User or a Customer.
+export const ACTOR_TYPES = {
+  STAFF: "Staff",
+  CUSTOMER: "Customer",
+};
+
+// Record-changing actions that get logged. Passive browsing (viewing a
+// dashboard, opening a tracker) is intentionally NOT logged — see
+// SCHEMA_AND_MODULE_MAP.md Module 3 notes on data-privacy scope.
+export const ACTION_TYPES = {
+  LOGIN: "Login",
+  ACCOUNT_CREATED: "AccountCreated",
+  PASSWORD_RESET: "PasswordReset",
+  ORDER_SUBMITTED: "OrderSubmitted",
+  ORDER_STATUS_CHANGED: "OrderStatusChanged",
+  PAYMENT_SUBMITTED: "PaymentSubmitted",
+  INVENTORY_UPDATED: "InventoryUpdated",
+  PROMO_CREATED: "PromoCreated",
+  FEEDBACK_SUBMITTED: "FeedbackSubmitted",
+};
+
+// ===== Module 16: Notifications & Alerts =====
+
+export const NOTIFICATION_TYPES = {
+  NEW_ORDER: "NewOrder",           // any order placed — notifies owner
+  RUSH_ORDER: "RushOrder",         // rush order placed — notifies owner urgently
+  ORDER_READY: "OrderReady",       // Order.status becomes DONE — notifies customer to pick up
+  UNCLAIMED_ORDER: "UnclaimedOrder", // days since DONE exceed UNCLAIMED_THRESHOLD_DAYS — notifies owner
+  LOW_STOCK: "LowStock",
+  PAYMENT: "Payment",
+  PROMO: "Promo",
+  ANNOUNCEMENT: "Announcement", // broadcast to all customers, no single relatedOrderId
+};

@@ -1,0 +1,85 @@
+<div class="card">
+  <h1 class="dashboard-welcome">Place an Order</h1>
+  <p class="field-hint order-intro">Tell us what to print, upload your files, and choose how you will pay.</p>
+
+  <form id="customerOrderForm" novalidate>
+    <div class="form-group">
+      <label for="orderServiceType">Service</label>
+      <select id="orderServiceType"></select>
+    </div>
+
+    <div class="form-group">
+      <label for="orderBinding">Add-on</label>
+      <select id="orderBinding"></select>
+    </div>
+
+    <div class="form-group">
+      <label for="orderFiles">Your files</label>
+      <input type="file" id="orderFiles" accept="application/pdf,.pdf" multiple>
+      <p class="field-hint">PDF files only. You can add files more than once and remove any you picked by mistake.</p>
+      <ul id="orderFileList"></ul>
+      <p class="field-hint" id="orderFileAnalysis" role="status" aria-live="polite">Page count and paper size will be detected from your PDFs. You can edit either value.</p>
+    </div>
+
+    <div class="form-group">
+      <label for="orderSubject">Subject</label>
+      <input type="text" id="orderSubject" placeholder="e.g. Thesis printing">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="orderPaperSize">Paper size</label>
+        <input type="text" id="orderPaperSize" placeholder="A4, Short, Long">
+      </div>
+      <div class="form-group">
+        <label for="orderPages">Total pages</label>
+        <input type="number" id="orderPages" min="1">
+      </div>
+      <div class="form-group">
+        <label for="orderCopies">Copies</label>
+        <input type="number" id="orderCopies" min="1" value="1">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="orderColorTier">Print type</label>
+      <select id="orderColorTier"></select>
+    </div>
+
+    <div class="form-group">
+      <label for="orderNotes">Notes for the shop</label>
+      <textarea id="orderNotes" rows="3" placeholder="Binding instructions, page order, special requests"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label><input type="checkbox" id="orderRush"> Rush order — needed sooner than usual</label>
+    </div>
+
+    <div class="form-group">
+      <label for="orderPaymentMethod">Payment method</label>
+      <select id="orderPaymentMethod"></select>
+      <p class="field-hint" id="orderCashHint">Pay in cash when you pick up your order.</p>
+    </div>
+
+    <div class="form-group" id="orderProofWrap" hidden>
+      <label for="orderProofFile">Proof of payment</label>
+      <input type="file" id="orderProofFile" accept="image/*,.pdf">
+    </div>
+
+    <div class="form-group">
+      <label for="orderPromo">Promotion</label>
+      <select id="orderPromo">
+        <option value="">No promotion</option>
+      </select>
+      <p class="field-hint" id="orderPromoHint" aria-live="polite"></p>
+    </div>
+
+    <article class="order-card">
+      <p class="order-service">Estimated total: <strong id="orderEstimateTotal">₱0</strong></p>
+      <p class="order-summary" id="orderEstimateDetail"></p>
+      <p class="field-hint">Binding and lamination fees, and any promo, are confirmed by the shop.</p>
+    </article>
+
+    <button type="submit" class="btn btn-primary btn-block">Submit order</button>
+  </form>
+</div>

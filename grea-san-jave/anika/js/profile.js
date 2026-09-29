@@ -21,8 +21,22 @@ function updateOwnProfile(formData) {
   if (isBlank(formData.username)) {
     errors.username = "Username is required.";
   }
-  if (isBlank(formData.email) || !isValidEmailFormat(formData.email)) {
-    errors.email = "A valid email is required.";
+  let email = isBlank(formData.email) ? "" : formData.email.trim();
+  if (
+    (currentActorType === ACTOR_TYPES.STAFF && email === "") ||
+    (email !== "" && !isValidEmailFormat(email))
+  ) {
+    errors.email = currentActorType === ACTOR_TYPES.STAFF && email === ""
+      ? "A valid email is required."
+      : "Enter a valid email address or leave this field blank.";
+  }
+  let contactNumber = isBlank(formData.contactNumber) ? "" : formData.contactNumber.trim();
+  if (
+    currentActorType === ACTOR_TYPES.CUSTOMER &&
+    contactNumber !== "" &&
+    !/^[0-9]{11}$/.test(contactNumber)
+  ) {
+    errors.contactNumber = "Contact number must contain exactly 11 digits, or be left blank.";
   }
 
   let usernameIndexUsers = findIndexByFieldCaseInsensitive(
@@ -55,44 +69,43 @@ function updateOwnProfile(formData) {
     errors.username = "That username is already taken.";
   }
 
-  let emailIndexUsers = findIndexByFieldCaseInsensitive(
-    users,
-    "email",
-    formData.email
-  );
-  let emailIndexCustomers = findIndexByFieldCaseInsensitive(
-    customers,
-    "email",
-    formData.email
-  );
-  if (
-    (emailIndexUsers !== -1 &&
-      !(
-        currentActorType === ACTOR_TYPES.STAFF &&
-        users[emailIndexUsers].userId === currentUser.userId
-      )) ||
-    (emailIndexCustomers !== -1 &&
-      !(
-        currentActorType === ACTOR_TYPES.CUSTOMER &&
-        customers[emailIndexCustomers].customerId === currentUser.customerId
-      ))
-  ) {
-    errors.email = "That email is already in use.";
+  if (email !== "") {
+    let emailIndexUsers = findIndexByFieldCaseInsensitive(users, "email", email);
+    let emailIndexCustomers = findIndexByFieldCaseInsensitive(customers, "email", email);
+    if (
+      (emailIndexUsers !== -1 &&
+        !(currentActorType === ACTOR_TYPES.STAFF && users[emailIndexUsers].userId === currentUser.userId)) ||
+      (emailIndexCustomers !== -1 &&
+        !(currentActorType === ACTOR_TYPES.CUSTOMER && customers[emailIndexCustomers].customerId === currentUser.customerId))
+    ) {
+      errors.email = "That email is already in use.";
+    }
   }
 
   if (hasObjectProperties(errors)) {
     return { success: false, errors: errors };
   }
 
+  let emailChanged =
+    currentActorType === ACTOR_TYPES.CUSTOMER &&
+    email !== (currentUser.email || "");
+
   if (currentActorType === ACTOR_TYPES.STAFF) {
     currentUser.fullName = formData.name.trim();
     currentUser.username = formData.username.trim();
-    currentUser.email = formData.email.trim();
+    currentUser.email = email;
   } else {
     currentUser.customerName = formData.name.trim();
     currentUser.username = formData.username.trim();
-    currentUser.email = formData.email.trim();
-    currentUser.messengerHandle = formData.messengerHandle.trim();
+    currentUser.contactNumber = contactNumber;
+    currentUser.email = email;
+    currentUser.messengerHandle = isBlank(formData.messengerHandle)
+      ? ""
+      : formData.messengerHandle.trim();
+    if (emailChanged) {
+      currentUser.isEmailVerified = email === "";
+      currentUser.emailVerificationToken = email === "" ? null : generateVerificationCode();
+    }
   }
 
   saveStateToSession();
@@ -106,7 +119,7 @@ function updateOwnProfile(formData) {
     null,
     "Personal profile updated."
   );
-  return { success: true };
+  return { success: true, emailChanged: emailChanged };
 }
 
 function validateOwnPasswordChange(currentPassword, newPassword, confirmPassword) {

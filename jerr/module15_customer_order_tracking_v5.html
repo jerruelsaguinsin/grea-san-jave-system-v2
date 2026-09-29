@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Order Tracking | Grea San Jave Printing Services</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f5f6f8;
+      color: #252525;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 1050px;
+      margin: 0 auto;
+      padding: 28px 20px 50px;
+    }
+
+    .dashboard-welcome {
+      margin: 0 0 6px;
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .field-hint {
+      color: #777;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .order-intro {
+      margin: 0 0 24px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #e3e5e8;
+      border-radius: 12px;
+      padding: 22px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    /* Shopping-app style tabs */
+    .order-tabs {
+      display: flex;
+      width: 100%;
+      overflow-x: auto;
+      border-bottom: 1px solid #e2e2e2;
+      margin-bottom: 18px;
+      scrollbar-width: thin;
+    }
+
+    .order-tab {
+      border: 0;
+      background: transparent;
+      padding: 14px 18px;
+      font-size: 14px;
+      color: #777;
+      cursor: pointer;
+      white-space: nowrap;
+      border-bottom: 2px solid transparent;
+    }
+
+    .order-tab:hover {
+      color: #222;
+    }
+
+    .order-tab.active {
+      color: #222;
+      font-weight: 700;
+      border-bottom-color: #222;
+    }
+
+    .tab-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      margin-left: 5px;
+      border-radius: 10px;
+      background: #f0f1f2;
+      font-size: 11px;
+    }
+
+    .order-tab.active .tab-count {
+      background: #222;
+      color: #fff;
+    }
+
+    .order-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .order-card {
+      border: 1px solid #e3e5e8;
+      border-radius: 10px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .order-file-name {
+      margin: 0 0 5px;
+      font-size: 14px;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    .expand-order-btn {
+      width: 34px;
+      height: 34px;
+      flex: 0 0 34px;
+      border: 1px solid #dedede;
+      border-radius: 50%;
+      background: #fff;
+      color: #555;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .expand-order-btn:hover {
+      background: #f3f3f3;
+    }
+
+    .chevron {
+      width: 8px;
+      height: 8px;
+      border-right: 2px solid #555;
+      border-bottom: 2px solid #555;
+      transform: rotate(45deg);
+      transition: transform 0.15s ease;
+      margin-top: -4px;
+    }
+
+    .expand-order-btn.expanded .chevron {
+      transform: rotate(225deg);
+      margin-top: 4px;
+    }
+
+    .order-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 16px;
+      background: #fafafa;
+      border-bottom: 1px solid #e8e8e8;
+    }
+
+    .order-shop {
+      font-size: 13px;
+      font-weight: 700;
+      margin: 0 0 5px;
+    }
+
+    .order-id {
+      margin: 0;
+      color: #777;
+      font-size: 12px;
+    }
+
+    .status-badge {
+      display: inline-block;
+      border: 1px solid #d8d8d8;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #fff;
+      white-space: nowrap;
+    }
+
+    .status-badge.queued {
+      background: #fff8df;
+      border-color: #ead99b;
+    }
+
+    .status-badge.printing {
+      background: #eef5ff;
+      border-color: #cbdcf5;
+    }
+
+    .status-badge.done {
+      background: #edf8ef;
+      border-color: #c9e2ce;
+    }
+
+    .status-badge.unclaimed {
+      background: #fff0ed;
+      border-color: #e9c7c0;
+    }
+
+    .status-badge.cancelled {
+      background: #f1f1f1;
+      border-color: #d8d8d8;
+    }
+
+    .order-card-body {
+      padding: 18px;
+    }
+
+    .order-main-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+    }
+
+    .order-description {
+      margin: 0;
+      color: #666;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .order-price {
+      text-align: right;
+      min-width: 120px;
+    }
+
+    .order-price-label {
+      display: block;
+      color: #888;
+      font-size: 11px;
+      margin-bottom: 3px;
+    }
+
+    .order-price-value {
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .order-details {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid #ededed;
+    }
+
+    .detail-label {
+      display: block;
+      color: #888;
+      font-size: 11px;
+      margin-bottom: 4px;
+    }
+
+    .detail-value {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    /* Active order progress */
+    .progress-wrap {
+      margin-top: 20px;
+      padding-top: 17px;
+      border-top: 1px solid #ededed;
+    }
+
+    .progress-title {
+      margin: 0 0 14px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .progress {
+      display: flex;
+      align-items: flex-start;
+      width: 100%;
+    }
+
+    .progress-step {
+      flex: 1;
+      position: relative;
+      text-align: center;
+    }
+
+    .progress-step:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      top: 11px;
+      left: calc(50% + 12px);
+      right: calc(-50% + 12px);
+      height: 2px;
+      background: #dedede;
+    }
+
+    .progress-step.completed:not(:last-child)::after,
+    .progress-step.current:not(:last-child)::after {
+      background: #333;
+    }
+
+    .progress-dot {
+      position: relative;
+      z-index: 2;
+      width: 24px;
+      height: 24px;
+      margin: 0 auto 7px;
+      border-radius: 50%;
+      border: 2px solid #d6d6d6;
+      background: #fff;
+    }
+
+    .progress-step.completed .progress-dot,
+    .progress-step.current .progress-dot {
+      border-color: #222;
+      background: #222;
+    }
+
+    .progress-step.current .progress-dot {
+      box-shadow: 0 0 0 4px #eeeeee;
+    }
+
+    .progress-label {
+      color: #888;
+      font-size: 11px;
+    }
+
+    .progress-step.completed .progress-label,
+    .progress-step.current .progress-label {
+      color: #222;
+      font-weight: 700;
+    }
+
+    .order-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid #ededed;
+    }
+
+    .payment-text {
+      color: #666;
+      font-size: 12px;
+    }
+
+    .payment-text strong {
+      color: #333;
+    }
+
+    .btn {
+      display: inline-block;
+      border: 1px solid #222;
+      border-radius: 7px;
+      padding: 9px 14px;
+      background: #fff;
+      color: #222;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background: #f3f3f3;
+    }
+
+    .empty-state {
+      padding: 50px 20px;
+      text-align: center;
+      border: 1px dashed #d7d7d7;
+      border-radius: 10px;
+      background: #fafafa;
+    }
+
+    .empty-state h2 {
+      margin: 0 0 8px;
+      font-size: 18px;
+    }
+
+    .empty-state p {
+      margin: 0;
+      color: #777;
+      font-size: 13px;
+    }
+
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 20px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-backdrop.show {
+      display: flex;
+    }
+
+    .modal {
+      width: 100%;
+      max-width: 570px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #ddd;
+      padding: 22px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 18px;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .modal-close {
+      border: 0;
+      background: transparent;
+      font-size: 22px;
+      cursor: pointer;
+      color: #666;
+    }
+
+    .modal-section {
+      padding: 13px 0;
+      border-top: 1px solid #ededed;
+    }
+
+    .modal-section:first-of-type {
+      border-top: 0;
+    }
+
+    .modal-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      margin-bottom: 9px;
+      font-size: 13px;
+    }
+
+    .modal-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .modal-row span:first-child {
+      color: #777;
+    }
+
+    .modal-row strong {
+      text-align: right;
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        padding: 22px 12px 40px;
+      }
+
+      .card {
+        padding: 14px;
+      }
+
+      .order-details {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .order-main-row {
+        flex-direction: column;
+      }
+
+      .order-price {
+        text-align: left;
+      }
+
+      .order-footer {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .dashboard-welcome {
+        font-size: 23px;
+      }
+
+      .order-tabs {
+        margin-left: -14px;
+        margin-right: -14px;
+        width: calc(100% + 28px);
+      }
+
+      .order-tab {
+        padding: 13px 14px;
+      }
+
+      .order-card-header {
+        flex-direction: column;
+      }
+
+      .order-details {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .progress-label {
+        font-size: 9px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+    <section class="card">
+      <h1 class="dashboard-welcome">My Orders</h1>
+      <p class="field-hint order-intro">
+        Track your current orders and view your previous printing orders.
+      </p>
+
+      <!-- Shopping-app style order tabs -->
+      <nav class="order-tabs" aria-label="Order status filters">
+        <button type="button" class="order-tab active" data-tab="all">
+          All <span class="tab-count" id="countAll">0</span>
+        </button>
+
+        <button type="button" class="order-tab" data-tab="processing">
+          Processing <span class="tab-count" id="countProcessing">0</span>
+        </button>
+
+        <button type="button" class="order-tab" data-tab="ready">
+          Ready for Claiming <span class="tab-count" id="countReady">0</span>
+        </button>
+
+        <button type="button" class="order-tab" data-tab="completed">
+          Completed <span class="tab-count" id="countCompleted">0</span>
+        </button>
+
+        <button type="button" class="order-tab" data-tab="cancelled">
+          Cancelled <span class="tab-count" id="countCancelled">0</span>
+        </button>
+
+      </nav>
+
+      <div id="orderList" class="order-list"></div>
+    </section>
+  </main>
+
+  <!-- Order details modal -->
+  <div id="orderModalBackdrop" class="modal-backdrop">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <h2 id="modalTitle">Order Details</h2>
+        <button type="button" class="modal-close" id="modalClose" aria-label="Close">
+          &times;
+        </button>
+      </div>
+
+      <div id="modalContent"></div>
+    </section>
+  </div>
+
+  <script>
+    /*
+      MODULE 15 — CUSTOMER ORDER TRACKING
+
+      Schema alignment:
+      - Reads Order records owned by Module 5.
+      - Filters records using the logged-in customer's customerId.
+      - Processing combines queued and printing orders.
+      - Ready for Claiming contains unclaimed orders.
+      - Completed contains completed orders.
+      - Uses ORDER_STATUS values from constants.js:
+          queued
+          printing
+          done
+          unclaimed
+          cancelled
+
+      IMPORTANT:
+      The sampleOrders array is demo data only.
+      Replace it with the actual logged-in customer's Order records
+      from your application's data source.
+
+      No Array.filter(), map(), reduce(), find(), includes(), sort(),
+      or other array helper functions are used.
+    */
+
+    // ===== Constants copied from constants.js for this standalone page =====
+
+    var ORDER_STATUS = {
+      QUEUED: "queued",
+      PRINTING: "printing",
+      DONE: "done",
+      UNCLAIMED: "unclaimed",
+      CANCELLED: "cancelled"
+    };
+
+    // ===== Logged-in customer =====
+    // Replace this with the actual logged-in customer's customerId.
+    var loggedInCustomerId = 1001;
+
+    // ===== Demo Order data =====
+    // Field names follow SCHEMA_AND_MODULE_MAP.md exactly.
+    var sampleOrders = [
+      {
+        orderId: 1042,
+        customerId: 1001,
+        customerName: "Juan Dela Cruz",
+        fileName: "thesis-final.pdf",
+        fileChannel: "Customer Portal",
+        fileCount: 1,
+        notes: "Spiral bind after printing.",
+        fileDisposed: false,
+        dateDisposed: "",
+        serviceType: "Document Printing",
+        serviceOption: "Spiral Binding",
+        paperSize: "A4",
+        pages: 85,
+        copies: 2,
+        colorTier: "Black Text",
+        isRush: true,
+        queueType: "advance",
+        priorityLevel: "high",
+        pricePerPage: 3,
+        baseTotalPrice: 570,
+        promoId: 0,
+        discountAmount: 0,
+        totalPrice: 570,
+        requiresDownPayment: true,
+        downPaymentAmount: 285,
+        paymentMethod: "GCash",
+        paymentStatus: "downPaymentPaid",
+        proofOfPaymentFile: "payment-1042.jpg",
+        status: "printing",
+        dateAdded: "2026-09-28T13:20:00",
+        dateCompleted: "",
+        unclaimedReason: "",
+        daysUnclaimed: 0
+      },
+
+      {
+        orderId: 1038,
+        customerId: 1001,
+        customerName: "Juan Dela Cruz",
+        fileName: "assignment-4.pdf",
+        fileChannel: "Customer Portal",
+        fileCount: 1,
+        notes: "",
+        fileDisposed: true,
+        dateDisposed: "2026-09-27T18:05:00",
+        serviceType: "Document Printing",
+        serviceOption: "None",
+        paperSize: "Short",
+        pages: 12,
+        copies: 1,
+        colorTier: "Minimal Color",
+        isRush: false,
+        queueType: "walkIn",
+        priorityLevel: "low",
+        pricePerPage: 5,
+        baseTotalPrice: 60,
+        promoId: 0,
+        discountAmount: 0,
+        totalPrice: 60,
+        requiresDownPayment: false,
+        downPaymentAmount: 0,
+        paymentMethod: "Cash",
+        paymentStatus: "fullyPaid",
+        proofOfPaymentFile: "",
+        status: "done",
+        dateAdded: "2026-09-27T14:10:00",
+        dateCompleted: "2026-09-27T18:00:00",
+        unclaimedReason: "",
+        daysUnclaimed: 0
+      },
+
+      {
+        orderId: 1029,
+        customerId: 1001,
+        customerName: "Juan Dela Cruz",
+        fileName: "research-paper.pdf",
+        fileChannel: "Messenger",
+        fileCount: 2,
+        notes: "Print double-sided.",
+        fileDisposed: true,
+        dateDisposed: "2026-09-25T17:20:00",
+        serviceType: "Document Printing",
+        serviceOption: "Lamination",
+        paperSize: "Long",
+        pages: 25,
+        copies: 1,
+        colorTier: "Small Image",
+        isRush: false,
+        queueType: "walkIn",
+        priorityLevel: "low",
+        pricePerPage: 10,
+        baseTotalPrice: 250,
+        promoId: 0,
+        discountAmount: 0,
+        totalPrice: 250,
+        requiresDownPayment: false,
+        downPaymentAmount: 0,
+        paymentMethod: "Cash",
+        paymentStatus: "fullyPaid",
+        proofOfPaymentFile: "",
+        status: "unclaimed",
+        dateAdded: "2026-09-25T10:15:00",
+        dateCompleted: "2026-09-25T15:30:00",
+        unclaimedReason: "Customer did not show up",
+        daysUnclaimed: 3
+      },
+
+      {
+        orderId: 1017,
+        customerId: 1001,
+        customerName: "Juan Dela Cruz",
+        fileName: "class-handouts.pdf",
+        fileChannel: "Email",
+        fileCount: 3,
+        notes: "",
+        fileDisposed: false,
+        dateDisposed: "",
+        serviceType: "Document Printing",
+        serviceOption: "None",
+        paperSize: "A4",
+        pages: 20,
+        copies: 3,
+        colorTier: "Black Text",
+        isRush: false,
+        queueType: "walkIn",
+        priorityLevel: "low",
+        pricePerPage: 3,
+        baseTotalPrice: 180,
+        promoId: 0,
+        discountAmount: 0,
+        totalPrice: 180,
+        requiresDownPayment: false,
+        downPaymentAmount: 0,
+        paymentMethod: "Cash",
+        paymentStatus: "pending",
+        proofOfPaymentFile: "",
+        status: "cancelled",
+        dateAdded: "2026-09-20T09:40:00",
+        dateCompleted: "",
+        unclaimedReason: "Cancelled by customer",
+        daysUnclaimed: 0
+      },
+
+      {
+        orderId: 1044,
+        customerId: 1001,
+        customerName: "Juan Dela Cruz",
+        fileName: "report.pdf",
+        fileChannel: "Customer Portal",
+        fileCount: 1,
+        notes: "Please print as soon as possible.",
+        fileDisposed: false,
+        dateDisposed: "",
+        serviceType: "Document Printing",
+        serviceOption: "None",
+        paperSize: "A4",
+        pages: 10,
+        copies: 1,
+        colorTier: "Full Color",
+        isRush: false,
+        queueType: "walkIn",
+        priorityLevel: "medium",
+        pricePerPage: 20,
+        baseTotalPrice: 200,
+        promoId: 0,
+        discountAmount: 0,
+        totalPrice: 200,
+        requiresDownPayment: false,
+        downPaymentAmount: 0,
+        paymentMethod: "Cash",
+        paymentStatus: "pending",
+        proofOfPaymentFile: "",
+        status: "queued",
+        dateAdded: "2026-09-28T16:40:00",
+        dateCompleted: "",
+        unclaimedReason: "",
+        daysUnclaimed: 0
+      }
+    ];
+
+    var currentTab = "all";
+
+    // ===== Basic display helpers =====
+    // These are user-defined functions. No Array helper methods are used.
+
+    function peso(value) {
+      var amount = Number(value);
+
+      if (isNaN(amount)) {
+        amount = 0;
+      }
+
+      return "₱" + amount.toFixed(2);
+    }
+
+    function statusText(status) {
+      if (status === ORDER_STATUS.QUEUED) {
+        return "To Process";
+      }
+
+      if (status === ORDER_STATUS.PRINTING) {
+        return "Printing";
+      }
+
+      if (status === ORDER_STATUS.DONE) {
+        return "Completed";
+      }
+
+      if (status === ORDER_STATUS.UNCLAIMED) {
+        return "Ready for Claiming";
+      }
+
+      if (status === ORDER_STATUS.CANCELLED) {
+        return "Cancelled";
+      }
+
+      return "Unknown";
+    }
+
+    function formatDate(dateString) {
+      if (dateString === null || dateString === undefined || dateString === "") {
+        return "—";
+      }
+
+      var dateObject = new Date(dateString);
+
+      if (isNaN(dateObject.getTime())) {
+        return dateString;
+      }
+
+      var month = dateObject.getMonth() + 1;
+      var day = dateObject.getDate();
+      var year = dateObject.getFullYear();
+
+      var hour = dateObject.getHours();
+      var minute = dateObject.getMinutes();
+      var suffix = "AM";
+
+      if (hour >= 12) {
+        suffix = "PM";
+      }
+
+      if (hour > 12) {
+        hour = hour - 12;
+      }
+
+      if (hour === 0) {
+        hour = 12;
+      }
+
+      if (minute < 10) {
+        minute = "0" + minute;
+      }
+
+      return month + "/" + day + "/" + year + " " + hour + ":" + minute + " " + suffix;
+    }
+
+    function safeText(value) {
+      if (value === null || value === undefined || value === "") {
+        return "—";
+      }
+
+      return String(value);
+    }
+
+    // ===== Order selection =====
+
+    function belongsToCustomer(order) {
+      if (order.customerId === loggedInCustomerId) {
+        return true;
+      }
+
+      return false;
+    }
+
+    function tabMatches(order, tabName) {
+      if (tabName === "all") {
+        return true;
+      }
+
+      if (tabName === "processing" &&
+          (order.status === ORDER_STATUS.QUEUED ||
+           order.status === ORDER_STATUS.PRINTING)) {
+        return true;
+      }
+
+      if (tabName === "ready" && order.status === ORDER_STATUS.UNCLAIMED) {
+        return true;
+      }
+
+      if (tabName === "completed" && order.status === ORDER_STATUS.DONE) {
+        return true;
+      }
+
+      if (tabName === "cancelled" && order.status === ORDER_STATUS.CANCELLED) {
+        return true;
+      }
+
+      return false;
+    }
+
+    // ===== Progress tracker =====
+
+    function progressClass(order, stepNumber) {
+      var currentStep = 1;
+
+      if (order.status === ORDER_STATUS.DONE || order.status === ORDER_STATUS.UNCLAIMED) {
+        currentStep = 3;
+      } else if (order.status === ORDER_STATUS.PRINTING) {
+        currentStep = 2;
+      } else if (order.status === ORDER_STATUS.QUEUED) {
+        currentStep = 1;
+      }
+
+      if (stepNumber < currentStep) {
+        return "completed";
+      }
+
+      if (stepNumber === currentStep) {
+        return "current";
+      }
+
+      return "";
+    }
+
+    function buildProgress(order) {
+      if (order.status === ORDER_STATUS.CANCELLED) {
+        return "";
+      }
+
+      var html = "";
+
+      html += '<div class="progress-wrap">';
+      html += '<p class="progress-title">Order progress</p>';
+      html += '<div class="progress">';
+
+      html += '<div class="progress-step ' + progressClass(order, 1) + '">';
+      html += '<div class="progress-dot"></div>';
+      html += '<div class="progress-label">Processing</div>';
+      html += '</div>';
+
+      html += '<div class="progress-step ' + progressClass(order, 2) + '">';
+      html += '<div class="progress-dot"></div>';
+      html += '<div class="progress-label">Ready</div>';
+      html += '</div>';
+
+      html += '<div class="progress-step ' + progressClass(order, 3) + '">';
+      html += '<div class="progress-dot"></div>';
+      html += '<div class="progress-label">Complete / Picked Up</div>';
+      html += '</div>';
+
+      html += '</div>';
+      html += '</div>';
+
+      return html;
+    }
+
+    // ===== Order card =====
+
+    function buildOrderCard(order) {
+      var html = "";
+      var rushText = order.isRush === true ? "Rush" : "Regular";
+      var paymentStatus = "Pending";
+
+      if (order.paymentStatus === "downPaymentPaid") {
+        paymentStatus = "Down payment paid";
+      }
+
+      if (order.paymentStatus === "fullyPaid") {
+        paymentStatus = "Fully paid";
+      }
+
+      html += '<article class="order-card">';
+
+      // Compact order row: only file name and order ID are visible initially.
+      html += '<div class="order-card-header">';
+      html += '<div>';
+      html += '<p class="order-file-name">' + safeText(order.fileName) + '</p>';
+      html += '<p class="order-id">Order #' + safeText(order.orderId) + '</p>';
+      html += '</div>';
+
+      html += '<button type="button" class="expand-order-btn" ';
+      html += 'data-order-id="' + order.orderId + '" ';
+      html += 'aria-expanded="false" aria-label="Show order details">';
+      html += '<span class="chevron" aria-hidden="true"></span>';
+      html += '</button>';
+      html += '</div>';
+
+      // Existing order information is hidden until expanded.
+      html += '<div class="order-card-body" id="orderBody-' + order.orderId + '" hidden>';
+
+      html += '<div class="order-main-row">';
+      html += '<div>';
+      html += '<p class="order-description">';
+      html += safeText(order.serviceType) + ' · ' + safeText(order.serviceOption);
+      html += '</p>';
+      html += '</div>';
+
+      html += '<div class="order-price">';
+      html += '<span class="order-price-label">Total</span>';
+      html += '<span class="order-price-value">' + peso(order.totalPrice) + '</span>';
+      html += '</div>';
+      html += '</div>';
+
+      html += '<div class="order-details">';
+
+      html += '<div>';
+      html += '<span class="detail-label">Order date</span>';
+      html += '<span class="detail-value">' + formatDate(order.dateAdded) + '</span>';
+      html += '</div>';
+
+      html += '<div>';
+      html += '<span class="detail-label">Pages × Copies</span>';
+      html += '<span class="detail-value">' + safeText(order.pages) + ' × ' + safeText(order.copies) + '</span>';
+      html += '</div>';
+
+      html += '<div>';
+      html += '<span class="detail-label">Print type</span>';
+      html += '<span class="detail-value">' + safeText(order.colorTier) + '</span>';
+      html += '</div>';
+
+      html += '<div>';
+      html += '<span class="detail-label">Priority</span>';
+      html += '<span class="detail-value">' + rushText + '</span>';
+      html += '</div>';
+
+      html += '</div>';
+
+      html += buildProgress(order);
+
+      // Unclaimed information appears only after 2 or more days.
+      if (order.status === ORDER_STATUS.UNCLAIMED &&
+          Number(order.daysUnclaimed) >= 2) {
+        html += '<div class="progress-wrap">';
+        html += '<p class="progress-title">Unclaimed order</p>';
+        html += '<p class="field-hint">';
+        html += 'Completed on ' + formatDate(order.dateCompleted) + '. ';
+        html += safeText(order.daysUnclaimed) + ' day(s) unclaimed. ';
+        html += safeText(order.unclaimedReason);
+        html += '</p>';
+        html += '</div>';
+      }
+
+      if (order.status === ORDER_STATUS.CANCELLED) {
+        html += '<div class="progress-wrap">';
+        html += '<p class="progress-title">Order cancelled</p>';
+        html += '<p class="field-hint">' + safeText(order.unclaimedReason) + '</p>';
+        html += '</div>';
+      }
+
+      html += '<div class="order-footer">';
+      html += '<div class="payment-text">';
+      html += 'Payment: <strong>' + paymentStatus + '</strong> · ';
+      html += safeText(order.paymentMethod);
+      html += '</div>';
+
+      html += '<button type="button" class="btn view-order-btn" ';
+      html += 'data-order-id="' + order.orderId + '">View Details</button>';
+
+      html += '</div>';
+      html += '</div>';
+      html += '</article>';
+
+      return html;
+    }
+
+    // ===== Empty state =====
+
+    function buildEmptyState(tabName) {
+      var message = "You do not have any orders here.";
+
+      if (tabName === "all") {
+        message = "You do not have any orders yet.";
+      }
+
+      if (tabName === "queued") {
+        message = "You do not have orders currently being processed.";
+      }
+
+      if (tabName === "printing") {
+        message = "You do not have orders currently being processed.";
+      }
+
+      if (tabName === "ready") {
+        message = "You do not have orders ready for claiming.";
+      }
+
+      if (tabName === "completed") {
+        message = "You do not have completed orders yet.";
+      }
+
+      if (tabName === "cancelled") {
+        message = "You do not have cancelled orders.";
+      }
+
+      var html = "";
+
+      html += '<div class="empty-state">';
+      html += '<h2>No orders found</h2>';
+      html += '<p>' + message + '</p>';
+      html += '</div>';
+
+      return html;
+    }
+
+    // ===== Render order list =====
+
+    function renderOrders() {
+      var orderList = document.getElementById("orderList");
+
+      var html = "";
+      var displayedCount = 0;
+      var index = 0;
+
+      while (index < sampleOrders.length) {
+        var order = sampleOrders[index];
+
+        if (belongsToCustomer(order) === true &&
+            tabMatches(order, currentTab) === true) {
+          html += buildOrderCard(order);
+          displayedCount = displayedCount + 1;
+        }
+
+        index = index + 1;
+      }
+
+      if (displayedCount === 0) {
+        html = buildEmptyState(currentTab);
+      }
+
+      orderList.innerHTML = html;
+
+      attachExpandButtons();
+      attachViewButtons();
+    }
+
+    // ===== Update tab counts =====
+
+    function updateTabCounts() {
+      var all = 0;
+      var processing = 0;
+      var ready = 0;
+      var completed = 0;
+      var cancelled = 0;
+      var index = 0;
+
+      while (index < sampleOrders.length) {
+        var order = sampleOrders[index];
+
+        if (belongsToCustomer(order) === true) {
+          all = all + 1;
+
+          if (order.status === ORDER_STATUS.QUEUED ||
+              order.status === ORDER_STATUS.PRINTING) {
+            processing = processing + 1;
+          }
+
+          if (order.status === ORDER_STATUS.UNCLAIMED) {
+            ready = ready + 1;
+          }
+
+          if (order.status === ORDER_STATUS.DONE) {
+            completed = completed + 1;
+          }
+
+          if (order.status === ORDER_STATUS.CANCELLED) {
+            cancelled = cancelled + 1;
+          }
+        }
+
+        index = index + 1;
+      }
+
+      document.getElementById("countAll").textContent = all;
+      document.getElementById("countProcessing").textContent = processing;
+      document.getElementById("countReady").textContent = ready;
+      document.getElementById("countCompleted").textContent = completed;
+      document.getElementById("countCancelled").textContent = cancelled;
+    }
+
+    // ===== Tab handling =====
+
+    function setActiveTab(tabName) {
+      currentTab = tabName;
+
+      var tabs = document.getElementsByClassName("order-tab");
+      var index = 0;
+
+      while (index < tabs.length) {
+        var tab = tabs[index];
+
+        if (tab.getAttribute("data-tab") === tabName) {
+          tab.classList.add("active");
+        } else {
+          tab.classList.remove("active");
+        }
+
+        index = index + 1;
+      }
+
+      renderOrders();
+    }
+
+    function attachTabEvents() {
+      var tabs = document.getElementsByClassName("order-tab");
+      var index = 0;
+
+      while (index < tabs.length) {
+        tabs[index].addEventListener("click", function () {
+          var selectedTab = this.getAttribute("data-tab");
+          setActiveTab(selectedTab);
+        });
+
+        index = index + 1;
+      }
+    }
+
+    // ===== View details modal =====
+
+    function getOrderById(orderId) {
+      var index = 0;
+
+      while (index < sampleOrders.length) {
+        if (String(sampleOrders[index].orderId) === String(orderId) &&
+            belongsToCustomer(sampleOrders[index]) === true) {
+          return sampleOrders[index];
+        }
+
+        index = index + 1;
+      }
+
+      return null;
+    }
+
+    function buildModalContent(order) {
+      var html = "";
+
+      html += '<div class="modal-section">';
+
+      html += '<div class="modal-row">';
+      html += '<span>Status</span>';
+      html += '<strong>' + statusText(order.status) + '</strong>';
+      html += '</div>';
+
+      html += '<div class="modal-row">';
+      html += '<span>Order date</span>';
+      html += '<strong>' + formatDate(order.dateAdded) + '</strong>';
+      html += '</div>';
+
+      html += '<div class="modal-row">';
+      html += '<span>Completed</span>';
+      html += '<strong>' + formatDate(order.dateCompleted) + '</strong>';
+      html += '</div>';
+
+      html += '</div>';
+
+      html += '<div class="modal-section">';
+
+      html += '<div class="modal-row">';
+      html += '<span>Service</span>';
+      html += '<strong>' + safeText(order.serviceType) + '</strong>';
+      html += '</div>';
+
+      html += '<div class="modal-row">';
+      html += '<span>Add-on</span>';
+      html += '<strong>' + safeText(order.serviceOption) + '</strong>';
+      html += '</div>';
+
+      html += '<div class="modal-row">';
+      html += '<span>File</span>';
+      html += '<strong>' + safeText(order.fileName) + '</strong>';
+      html += '</div>';
+
+      html += '<div class="modal-row">';
+      html += '<span>File count</span>';
+      html += '<strong>' + safeText(order.fileCount) + '</strong>';
+      html += '</div>';
+
+      html += '</div>';
+
+      html += '<div class="modal-section">';
+
+      html += '<div class="modal-row">';
+      html += '<span>Paper size</span>';
+      html += '<strong>' + safeText(order.paperSize) + '</strong>';
+      html += '</div>';
+
+      html += '<div class="modal-row">';
+      html += '<span>Pages</span>';
+      html += '<strong>' + safeText(order.pages) + '</strong>';
+      html += '</div>';
+
+      html += '<div class="modal-row">';
+      html += '<span>Copies</span>';
+      html += '<strong>' + safeText(order.copies) + '</strong>';
+      html += '</div>';
+
+      html += '<div class="modal-row">';
+      html += '<span>Print type</span>';
+      html += '<strong>' + safeText(order.colorTier) + '</strong>';
+      html += '</div>';
+
+      html += '<div class="modal-row">';
+      html += '<span>Rush order</span>';
+      html += '<strong>' + (order.isRush === true ? "Yes" : "No") + '</strong>';
+      html += '</div>';
+
+      html += '</div>';
+
+      html += '<div class="modal-section">';
+
+      html += '<div class="modal-row">';
+      html += '<span>Base price</span>';
+      html += '<strong>' + peso(order.baseTotalPrice) + '</strong>';
+      html += '</div>';
+
+      html += '<div class="modal-row">';
+      html += '<span>Discount</span>';
+      html += '<strong>-' + peso(order.discountAmount) + '</strong>';
+      html += '</div>';
+
+      html += '<div class="modal-row">';
+      html += '<span>Total</span>';
+      html += '<strong>' + peso(order.totalPrice) + '</strong>';
+      html += '</div>';
+
+      html += '<div class="modal-row">';
+      html += '<span>Payment method</span>';
+      html += '<strong>' + safeText(order.paymentMethod) + '</strong>';
+      html += '</div>';
+
+      html += '<div class="modal-row">';
+      html += '<span>Payment status</span>';
+      html += '<strong>' + safeText(order.paymentStatus) + '</strong>';
+      html += '</div>';
+
+      html += '</div>';
+
+      if (order.notes !== null && order.notes !== "") {
+        html += '<div class="modal-section">';
+        html += '<div class="modal-row">';
+        html += '<span>Notes</span>';
+        html += '<strong>' + safeText(order.notes) + '</strong>';
+        html += '</div>';
+        html += '</div>';
+      }
+
+      if (order.status === ORDER_STATUS.UNCLAIMED && Number(order.daysUnclaimed) >= 2) {
+        html += '<div class="modal-section">';
+        html += '<div class="modal-row">';
+        html += '<span>Days unclaimed</span>';
+        html += '<strong>' + safeText(order.daysUnclaimed) + '</strong>';
+        html += '</div>';
+
+        html += '<div class="modal-row">';
+        html += '<span>Reason</span>';
+        html += '<strong>' + safeText(order.unclaimedReason) + '</strong>';
+        html += '</div>';
+        html += '</div>';
+      }
+
+      return html;
+    }
+
+    function openOrderModal(orderId) {
+      var order = getOrderById(orderId);
+
+      if (order === null) {
+        return;
+      }
+
+      document.getElementById("modalTitle").textContent =
+        "Order #" + order.orderId;
+
+      document.getElementById("modalContent").innerHTML =
+        buildModalContent(order);
+
+      document.getElementById("orderModalBackdrop").classList.add("show");
+    }
+
+    function closeOrderModal() {
+      document.getElementById("orderModalBackdrop").classList.remove("show");
+    }
+
+    function attachExpandButtons() {
+      var buttons = document.getElementsByClassName("expand-order-btn");
+      var index = 0;
+
+      while (index < buttons.length) {
+        buttons[index].addEventListener("click", function () {
+          var orderId = this.getAttribute("data-order-id");
+          var body = document.getElementById("orderBody-" + orderId);
+          var expanded = this.getAttribute("aria-expanded") === "true";
+
+          if (expanded === true) {
+            body.hidden = true;
+            this.setAttribute("aria-expanded", "false");
+            this.classList.remove("expanded");
+          } else {
+            body.hidden = false;
+            this.setAttribute("aria-expanded", "true");
+            this.classList.add("expanded");
+          }
+        });
+
+        index = index + 1;
+      }
+    }
+
+    function attachViewButtons() {
+      var buttons = document.getElementsByClassName("view-order-btn");
+      var index = 0;
+
+      while (index < buttons.length) {
+        buttons[index].addEventListener("click", function () {
+          var orderId = this.getAttribute("data-order-id");
+          openOrderModal(orderId);
+        });
+
+        index = index + 1;
+      }
+    }
+
+    function attachModalEvents() {
+      document.getElementById("modalClose").addEventListener("click", function () {
+        closeOrderModal();
+      });
+
+      document.getElementById("orderModalBackdrop").addEventListener("click", function (event) {
+        if (event.target === this) {
+          closeOrderModal();
+        }
+      });
+    }
+
+    // ===== Initial page setup =====
+
+    function initializeOrderTracking() {
+      attachTabEvents();
+      attachModalEvents();
+      updateTabCounts();
+      renderOrders();
+    }
+
+    initializeOrderTracking();
+  </script>
+</body>
+</html>

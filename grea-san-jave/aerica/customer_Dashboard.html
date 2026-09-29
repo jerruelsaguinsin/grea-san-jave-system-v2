@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grea San Jave — Module 11: Customer Dashboard</title>
+<link rel="stylesheet" href="../anika/css/anika.css">
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="brand-text">Grea <span class="secondary">San</span> <span class="accent">Jave</span> Printing Services</div>
+    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+      <nav class="page-nav">
+        <a href="promotions_Management.html">Promotions</a>
+        <a href="customer_Dashboard.html" class="active">Customer Dashboard</a>
+        <a href="customer_Feedback.html">Customer Feedback</a>
+      </nav>
+      <div class="customer-switcher">
+        <label for="customerSwitcher" class="customer-switcher-label" style="margin:0;">Viewing as:</label>
+        <select id="customerSwitcher"></select>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <h1 class="page-title">Customer Dashboard / Home</h1>
+
+    <div id="announcementBanner"></div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="statUnread">0</div>
+        <div class="stat-label">Unread Notifications</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statActivePromos">0</div>
+        <div class="stat-label">Active Promos Available</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statSuki">—</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title active-order-title">Active Order</h2>
+      <div id="activeOrderTeaser"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Promos You Can Use Right Now</h2>
+      <ul class="promo-mini-list" id="dashboardPromoList"></ul>
+    </div>
+
+    <div class="card">
+      <button class="btn btn-primary" id="newOrderShortcut" type="button">+ New Order</button>
+      <span style="font-size:0.8rem;color:var(--text-muted);margin-left:0.6rem;">
+        (shortcut into Module 14 — Customer Order Placement)
+      </span>
+    </div>
+  </main>
+
+  <script src="customer_Dashboard.js"></script>
+</body>
+</html>
