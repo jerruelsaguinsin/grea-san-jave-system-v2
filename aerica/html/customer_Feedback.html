@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grea San Jave — Module 12: Feedback &amp; Ratings</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  body.feedback-page {
+    background: var(--background-color);
+  }
+
+  .feedback-page main {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .feedback-page .customer-switcher {
+    max-width: 320px;
+    margin: 0 0 1rem auto;
+    padding: 0.65rem 0.8rem;
+    background: var(--primary-color-light);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    color: var(--primary-color-dark);
+  }
+
+  .feedback-page .customer-switcher select {
+    border-color: var(--border-color);
+  }
+
+  .feedback-page .order-feedback-row,
+  .feedback-page .feedback-item {
+    padding: 1rem;
+    margin-bottom: 0.85rem;
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+  }
+
+  .feedback-page .order-feedback-row:last-child,
+  .feedback-page .feedback-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .feedback-page .order-feedback-info {
+    margin-bottom: 0.85rem;
+  }
+
+  .feedback-page .feedback-form {
+    padding: 0.85rem;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+  }
+
+  .feedback-page .star-rating {
+    display: flex;
+    gap: 0.2rem;
+    margin: 0.25rem 0 0.65rem;
+  }
+
+  .feedback-page .star-rating .star {
+    color: var(--border-color);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.15s ease, transform 0.15s ease;
+  }
+
+  .feedback-page .star-rating:not(.readonly) .star:hover,
+  .feedback-page .star-rating:not(.readonly) .star:hover ~ .star,
+  .feedback-page .star-rating .star.filled {
+    color: var(--primary-color);
+  }
+
+  .feedback-page .star-rating:not(.readonly) .star:hover {
+    transform: scale(1.1);
+  }
+
+  .feedback-page .star-rating.readonly .star {
+    color: var(--primary-color);
+    cursor: default;
+  }
+
+  .feedback-page .feedback-item-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .feedback-page .feedback-item-head .star-rating {
+    margin: 0;
+  }
+
+  .feedback-page .feedback-comment {
+    margin: 0.65rem 0;
+    padding: 0.65rem 0.8rem;
+    background: var(--primary-color-light);
+    border-radius: 8px;
+  }
+
+  .feedback-page .feedback-date {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+  }
+</style>
+</head>
+<body class="feedback-page">
+
+  <div class="module-shell">
+    <main>
+      <div class="customer-switcher">
+        <label for="customerSwitcher" class="customer-switcher-label" style="margin:0;">Viewing as:</label>
+        <select id="customerSwitcher"></select>
+      </div>
+      <h1 class="page-title">Customer Feedback &amp; Ratings</h1>
+
+      <div class="card">
+        <h2 class="card-title">Completed Orders</h2>
+        <div id="feedbackEligibleList"></div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Your Feedback History
+          <small>Average rating you've given: <span id="avgRatingDisplay"></span></small>
+        </h2>
+        <div id="feedbackHistoryList"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../js/customer_Feedback.js"></script>
+</body>
+</html>

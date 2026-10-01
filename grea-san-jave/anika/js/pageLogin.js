@@ -43,9 +43,25 @@ function handleLoginSubmit(event) {
     return;
   }
 
-  pendingLoginOtp = { account: result.account, actorType: result.actorType, challengeId: null };
-  showLoginOtpPanel();
-  requestLoginOtp();
+  finishLogin(completeLoginAfterOtp(result.account, result.actorType));
+}
+
+function finishLogin(loginResult) {
+  if (!loginResult.success) {
+    showToast(loginResult.message || "Unable to complete login.", "error");
+    return;
+  }
+
+  let welcomeName = loginResult.actorType === ACTOR_TYPES.STAFF
+    ? loginResult.account.fullName
+    : loginResult.account.customerName;
+
+  loginOtpChallenges = [];
+  hideLoginOtpPanel();
+  showToast("Welcome back, " + welcomeName + "!", "success");
+  setTimeout(function () {
+    window.location.href = getDashboardUrlForCurrentUser();
+  }, 600);
 }
 
 function handleSignupSubmit(event) {
@@ -296,25 +312,7 @@ function handleLoginOtpSubmit(event) {
     return;
   }
 
-  let welcomeName =
-    loginResult.actorType === ACTOR_TYPES.STAFF
-      ? loginResult.account.fullName
-      : loginResult.account.customerName;
-
-  loginOtpChallenges = [];
-  hideLoginOtpPanel();
-
-  showToast(
-    "Welcome back, " + welcomeName + "!",
-    "success"
-  );
-
-  setTimeout(function () {
-    window.location.href = getDashboardUrlForCurrentUser();
-  }, 600); loginOtpChallenges = [];
-  hideLoginOtpPanel();
-  showToast("Welcome back, " + welcomeName + "!", "success");
-  setTimeout(function () { window.location.href = getDashboardUrlForCurrentUser(); }, 600);
+  finishLogin(loginResult);
 }
 
 // Kicks off the real EmailJS send and reflects the outcome in the panel.

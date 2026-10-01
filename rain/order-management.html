@@ -35,6 +35,7 @@
 .field-value { font-weight: 600; }
 .card-actions { justify-content: flex-end; margin-top: 1rem; }
 .order-card.is-next-up { border-color: var(--primary-color); }
+.priority-badge { margin-left: .45rem; }
 .empty-state { padding: 2.5rem 1rem; text-align: center; color: var(--text-muted); }
 .empty-title { margin: 0; color: var(--text-color); }
 .empty-text { margin: .25rem 0 0; }
@@ -585,6 +586,27 @@ PRICE_PER_PAGE[COLOR_TIERS.FULL_COLOR] = 20;
 var ORDER_CHANNELS = { CUSTOMER_PORTAL: "Customer Portal", MESSENGER: "Messenger", EMAIL: "Email", IN_PERSON: "In Person", BLUETOOTH: "Bluetooth" };
 var ORDER_STATUS = { QUEUED: "queued", PRINTING: "printing", DONE: "done", UNCLAIMED: "unclaimed", CANCELLED: "cancelled" };
 var QUEUE_TYPES = { ADVANCE: "advance", WALK_IN: "walkIn" };
+
+function normalizeOrderStatusText(statusText) {
+    var normalizedText = trimWhitespace(statusText === undefined || statusText === null ? "" : String(statusText));
+    normalizedText = toLowerCaseText(normalizedText);
+    if (normalizedText === "queued") { return ORDER_STATUS.QUEUED; }
+    if (normalizedText === "printing") { return ORDER_STATUS.PRINTING; }
+    if (normalizedText === "done") { return ORDER_STATUS.DONE; }
+    if (normalizedText === "unclaimed") { return ORDER_STATUS.UNCLAIMED; }
+    if (normalizedText === "cancelled") { return ORDER_STATUS.CANCELLED; }
+    return normalizedText;
+}
+
+function displayOrderStatusText(statusText) {
+    var normalizedText = normalizeOrderStatusText(statusText);
+    if (normalizedText === ORDER_STATUS.QUEUED) { return "Queued"; }
+    if (normalizedText === ORDER_STATUS.PRINTING) { return "Printing"; }
+    if (normalizedText === ORDER_STATUS.DONE) { return "Done"; }
+    if (normalizedText === ORDER_STATUS.UNCLAIMED) { return "Unclaimed"; }
+    if (normalizedText === ORDER_STATUS.CANCELLED) { return "Cancelled"; }
+    return normalizedText;
+}
 var PAYMENT_STATUS = { PENDING: "pending", DOWN_PAYMENT_PAID: "downPaymentPaid", FULLY_PAID: "fullyPaid" };
 var INVENTORY_CATEGORIES = {
     BOND_PAPER: "Bond Paper",
@@ -1139,9 +1161,9 @@ function cancelOrder(targetOrder) {
 }
 
 function setOrderStatus(targetOrder, newStatusText) {
-    targetOrder.status = newStatusText;
+    targetOrder.status = normalizeOrderStatusText(newStatusText);
 
-    if (newStatusText === ORDER_STATUS.DONE) {
+    if (targetOrder.status === ORDER_STATUS.DONE) {
         targetOrder.dateCompleted = getShopIsoDate();
         targetOrder.daysUnclaimed = 0;
 
@@ -1157,8 +1179,29 @@ function setOrderStatus(targetOrder, newStatusText) {
 }
 
 function checkUnclaimedOrders() {
-    var currentNode = ordersList.head;
+    var sortedOrders = [];
+    var orderIndex;
     while (currentNode !== null) {
+        sortedOrders[sortedOrders.length] = currentNode.value;
+        currentNode = currentNode.next;
+    }
+    // Sort by submission time so the latest order always appears first.
+    for (orderIndex = 0; orderIndex < sortedOrders.length; orderIndex = orderIndex + 1) {
+        var latestIndex = orderIndex;
+        var scanIndex;
+        for (scanIndex = orderIndex + 1; scanIndex < sortedOrders.length; scanIndex = scanIndex + 1) {
+            if (isoStringToMilliseconds(sortedOrders[scanIndex].dateAdded) > isoStringToMilliseconds(sortedOrders[latestIndex].dateAdded)) {
+                latestIndex = scanIndex;
+            }
+        }
+        if (latestIndex !== orderIndex) {
+            var swappedOrder = sortedOrders[orderIndex];
+            sortedOrders[orderIndex] = sortedOrders[latestIndex];
+            sortedOrders[latestIndex] = swappedOrder;
+        }
+    }
+    for (orderIndex = 0; orderIndex < sortedOrders.length; orderIndex = orderIndex + 1) {
+        var orderRecord = sortedOrders[orderIndex];
         var orderRecord = currentNode.value;
         if (orderRecord.status === ORDER_STATUS.DONE || orderRecord.status === ORDER_STATUS.UNCLAIMED) {
             var elapsedMilliseconds = getShopNowMs() - isoStringToMilliseconds(orderRecord.dateCompleted);
@@ -1210,7 +1253,8 @@ function importCustomerOrders() {
             sourceOrder = importedOrders[orderIndex];
             if (!sourceOrder || sourceOrder.orderId === undefined || linkedListFindOrder(ordersList, sourceOrder.orderId) !== null) { continue; }
             importedOrder = sourceOrder;
-            if (importedOrder.status === undefined) { importedOrder.status = ORDER_STATUS.QUEUED; }
+            importedOrder.status = normalizeOrderStatusText(importedOrder.status);
+            if (importedOrder.status === "") { importedOrder.status = ORDER_STATUS.QUEUED; }
             // Normalize customer-form fields to the owner-board schema without
             // discarding the fields supplied by the customer page.
             if (importedOrder.customerName === undefined) { importedOrder.customerName = "Customer"; }
@@ -1354,9 +1398,10 @@ function updateStatusTabs() {
     var filterName;
 
     while (currentNode !== null) {
+        var currentStatus = normalizeOrderStatusText(currentNode.value.status);
         statusCounts.all = statusCounts.all + 1;
-        if (statusCounts[currentNode.value.status] !== undefined) {
-            statusCounts[currentNode.value.status] = statusCounts[currentNode.value.status] + 1;
+        if (statusCounts[currentStatus] !== undefined) {
+            statusCounts[currentStatus] = statusCounts[currentStatus] + 1;
         }
         currentNode = currentNode.next;
     }
@@ -1379,14 +1424,15 @@ function renderTable() {
 
     while (currentNode !== null) {
         var orderRecord = currentNode.value;
+        var orderStatusText = normalizeOrderStatusText(orderRecord.status);
         var haystackText = toLowerCaseText(
             formatOrderId(orderRecord.orderId) + " " + orderRecord.customerName + " " + orderRecord.subject + " " +
             orderRecord.serviceType + " " + orderRecord.serviceOption + " " + orderRecord.paperSize + " " +
-            orderRecord.colorTier + " " + orderRecord.status + " " +
+            orderStatusText + " " +
             (orderRecord.fileName === null || orderRecord.fileName === undefined ? "" : orderRecord.fileName) + " " +
             (orderRecord.isRush ? "rush" : "walk-in")
         );
-        if ((activeStatusFilter === "all" || orderRecord.status === activeStatusFilter) &&
+        if ((activeStatusFilter === "all" || orderStatusText === activeStatusFilter) &&
             textIncludes(haystackText, queryText)) {
             orderTableBody.appendChild(buildOrderRow(orderRecord, nextUpOrder));
             shownCount = shownCount + 1;
@@ -1484,8 +1530,9 @@ function buildOrderRow(orderRecord, nextUpOrder) {
     cardElement.className = isNextUp ? "order-card is-next-up" : "order-card";
 
     var laneLabel = orderRecord.isRush ? "Rush" : "Walk-in";
+    var normalizedStatus = normalizeOrderStatusText(orderRecord.status);
     var queueText = laneLabel;
-    if (orderRecord.status === ORDER_STATUS.QUEUED) {
+    if (normalizedStatus === ORDER_STATUS.QUEUED) {
         queueText = laneLabel + " #" + queuePositionOf(getLaneQueue(orderRecord.queueType), orderRecord);
     }
 
@@ -1502,14 +1549,19 @@ function buildOrderRow(orderRecord, nextUpOrder) {
     idElement.textContent = formatOrderId(orderRecord.orderId);
 
     var statusBadge = document.createElement("span");
-    var isProblem = orderRecord.status === ORDER_STATUS.CANCELLED || orderRecord.status === ORDER_STATUS.UNCLAIMED;
+    var isProblem = normalizedStatus === ORDER_STATUS.CANCELLED || normalizedStatus === ORDER_STATUS.UNCLAIMED;
     statusBadge.className = isProblem ? "badge badge-inactive" : "badge badge-active";
-    statusBadge.textContent = orderRecord.status;
-    if (orderRecord.status === ORDER_STATUS.UNCLAIMED) {
-        statusBadge.textContent = orderRecord.status + " (" + orderRecord.daysUnclaimed + "d)";
+    statusBadge.textContent = displayOrderStatusText(normalizedStatus);
+    if (normalizedStatus === ORDER_STATUS.UNCLAIMED) {
+        statusBadge.textContent = displayOrderStatusText(normalizedStatus) + " (" + orderRecord.daysUnclaimed + "d)";
         statusBadge.title = orderRecord.unclaimedReason;
     }
     headElement.appendChild(idElement);
+    headElement.appendChild(statusBadge);
+    var priorityBadge = document.createElement("span");
+    priorityBadge.className = "badge badge-role priority-badge";
+    priorityBadge.textContent = orderRecord.isRush ? "Rush" : "Regular";
+    headElement.appendChild(priorityBadge);
 
     var customerElement = document.createElement("p");
     customerElement.className = "card-customer";
@@ -1533,7 +1585,7 @@ function buildOrderRow(orderRecord, nextUpOrder) {
     actionsElement.className = "card-actions";
 
     if (orderRecord.status === ORDER_STATUS.QUEUED) {
-        actionsElement.appendChild(buildActionButton("Start", "btn-secondary", !isNextUp,
+        actionsElement.appendChild(buildActionButton("Process", "btn-primary", !isNextUp,
             "An earlier order or a rush order goes first", startNextOrder));
         actionsElement.appendChild(buildActionButton("Cancel", "btn-danger", false, "", function () {
             cancelOrder(orderRecord);
@@ -1742,6 +1794,7 @@ function restoreSavedState() {
         for (orderIndex = savedOrders.length - 1; orderIndex >= 0; orderIndex = orderIndex - 1) {
             var savedOrder = savedOrders[orderIndex];
             if (!savedOrder || typeof savedOrder.orderId !== "number") { continue; }
+            savedOrder.status = normalizeOrderStatusText(savedOrder.status);
             linkedListInsertAtHead(ordersList, savedOrder);
             if (savedOrder.status === ORDER_STATUS.QUEUED) { queueEnqueue(getLaneQueue(savedOrder.queueType), savedOrder); }
             if (savedOrder.orderId >= nextOrderId) { nextOrderId = savedOrder.orderId + 1; }

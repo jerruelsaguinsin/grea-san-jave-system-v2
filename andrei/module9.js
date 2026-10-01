@@ -1,58 +1,115 @@
-/*
-GREA SAN JAVE — MODULE 9 — EXPENSE MANAGEMENT
-*/
+/* ============================================================
+MODULE JAVASCRIPT FILE
+PROCEDURAL JAVASCRIPT
+No CSS is included here.
+
+DEPENDENCIES:
+This module expects the main system's shared bootstrap/helpers and
+account system to already be loaded (GSJ, gsEscapeHtml, gsFormatPeso,
+gsToast, etc.). Do NOT create a common.js file.
+
+Load this file after the module HTML and after the main shared helpers.
+============================================================ */
+
+/* ========================================================================
+   MODULE 9 — EXPENSE MANAGEMENT
+   PROCEDURAL JAVASCRIPT VERSION
+
+   CSS NOTE:
+   Put anika.css in the <head> of the HTML page. This module contains NO CSS.
+
+   ACCOUNT INTEGRATION NOTE:
+   Your login/account module should set window.GSJ.currentUser before
+   exInit(...) runs. Do NOT put the demo account switcher in this module.
+   ======================================================================== */
 (function(){
 'use strict';
-window.GSJ=window.GSJ||{};
-var exActive=[];
+
+var exExpenses=[];
 var exArchived=[];
+var exUsers=[];
 var exNextId=1;
 var exBound=false;
 
-function exPad(n){return n<10?'0'+n:String(n);}
-function exToday(){var d=new Date();return d.getFullYear()+'-'+exPad(d.getMonth()+1)+'-'+exPad(d.getDate());}
-function exMoney(v){var n=Number(v||0);if(!isFinite(n))n=0;return Math.round(n*100)/100;}
-function exPeso(v){var n=exMoney(v),neg=n<0;if(neg)n=-n;var whole=Math.floor(n),cent=Math.round((n-whole)*100),raw=String(whole),out='',i;if(cent===100){whole++;cent=0;raw=String(whole);}for(i=raw.length-1;i>=0;i--){out=raw[i]+out;if((raw.length-i)%3===0&&i!==0)out=','+out;}return neg?'₱-'+out+'.'+exPad(cent):'₱'+out+'.'+exPad(cent);}
-function exEscape(v){var s=String(v==null?'':v),o='',i,c;for(i=0;i<s.length;i++){c=s[i];if(c==='&')o+='&amp;';else if(c==='<')o+='&lt;';else if(c==='>')o+='&gt;';else if(c==='"')o+='&quot;';else if(c==="'")o+='&#39;';else o+=c;}return o;}
-function exUser(){return window.GSJ&&window.GSJ.currentUser?window.GSJ.currentUser:null;}
-function exOwner(){var u=exUser();return !!u&&(u.role==='owner'||u.role==='coOwner'||u.role==='ownerAdmin');}
-function exVat(v){return exMoney(Number(v||0)*12/112);}
-function exBeforeVat(v){return exMoney(Number(v||0)-exVat(v));}
-function exMessage(text,type){var e=document.getElementById('exMessage');if(e){e.textContent=text||'';e.className='field-message '+(type==='error'?'error':'success');}}
-function exRenderUser(){var e=document.getElementById('exRecordedByName');var u=exUser();if(e)e.textContent=u?u.fullName:'Not signed in';}
-function exRender(){
-    var body=document.getElementById('exTableBody');if(!body)return;var html='',i,e;
-    for(i=0;i<exActive.length;i++){e=exActive[i];html+='<tr><td>#'+e.expenseId+'</td><td>'+exEscape(e.dateIncurred)+'</td><td>'+exEscape(e.category)+'</td><td>'+exEscape(e.description)+'</td><td>'+exPeso(e.amount)+'</td><td>'+exEscape(e.recordedByName)+'</td><td><button type="button" class="btn btn-secondary btn-small" onclick="ExpensesModule.archive('+e.expenseId+')">Archive</button></td></tr>';}
-    if(html==='')html='<tr><td colspan="7">No active expense records.</td></tr>';body.innerHTML=html;
-    var total=0;for(i=0;i<exActive.length;i++)total+=Number(exActive[i].amount||0);var grand=document.getElementById('exGrandTotal');if(grand)grand.textContent=exPeso(total);var count=document.getElementById('exActiveCount');if(count)count.textContent=exActive.length;
+function exCurrentUser(){if(window.GSJ&&window.GSJ.currentUser)return window.GSJ.currentUser;return null;}
+function exIsOwner(){var u=exCurrentUser();return !!u && u.role==='coOwner';}
+function exCategoryValid(category){return category==='Rent'||category==='Utilities'||category==='Supplies'||category==='Equipment Repair'||category==='Other';}
+function exFind(id){var i;for(i=0;i<exExpenses.length;i++)if(Number(exExpenses[i].expenseId)===Number(id))return exExpenses[i];return null;}
+
+function exSetDate(){var e=document.getElementById('exDate');if(e&&!e.value)e.value=gsTodayKey();}
+function exRenderUser(){var u=exCurrentUser(),a=document.getElementById('exRecordedByName'),b=document.getElementById('pmRecordedBy');if(a)a.textContent=u?u.fullName:'—';if(b)b.textContent=u?u.fullName:'—';}
+
+function exAddExpense(data){
+    var u=exCurrentUser();
+    if(!exCategoryValid(data.category))return gsFail('Please select a valid expense category.');
+    if(!isFinite(data.amount)||data.amount<=0)return gsFail('Expense amount must be greater than zero.');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(data.dateIncurred||''))return gsFail('Please enter a valid expense date.');
+    if(!u)return gsFail('No signed-in account is available to record this expense.');
+    if(!data.description)return gsFail('Please enter a description for the expense.');
+    var e={expenseId:exNextId++,category:data.category,amount:Number(data.amount),dateIncurred:data.dateIncurred,recordedBy:u.userId,recordedByName:u.fullName,description:data.description,createdAt:new Date().toISOString()};
+    exExpenses[exExpenses.length]=e;return {ok:true,expense:e};
 }
-function exRecord(){
-    var u=exUser();if(!u){exMessage('Please sign in before recording an expense.','error');return;}
-    var category=document.getElementById('exCategory'),amount=document.getElementById('exAmount'),date=document.getElementById('exDate'),description=document.getElementById('exDescription');
-    var value=Number(amount?amount.value:0);if(value<=0){exMessage('Expense amount must be greater than zero.','error');return;}if(!date||!date.value){exMessage('Please enter the expense date.','error');return;}if(!description||description.value===''){exMessage('Please enter a description.','error');return;}
-    var e={expenseId:exNextId++,category:category?category.value:'Other',amount:exMoney(value),dateIncurred:date.value,description:description.value,recordedBy:u.userId,recordedByName:u.fullName,vatIncluded:true,vatAmount:exVat(value),beforeVat:exBeforeVat(value)};
-    exActive[exActive.length]=e;exRender();exMessage('Expense recorded successfully.','success');if(amount)amount.value='';if(description)description.value='';if(window.SalesModule&&window.SalesModule.refresh)window.SalesModule.refresh();
+
+function exSubmit(){
+    gsSetError('exFormError','');
+    var result=exAddExpense({category:gsValue('exCategory'),amount:Number(gsValue('exAmount')),dateIncurred:gsValue('exDate'),description:gsValue('exDescription')});
+    if(!result.ok){gsSetError('exFormError',result.error);gsToast(result.error,'error');return;}
+    exRenderAll();var form=document.getElementById('exForm');if(form)form.reset();exSetDate();exRenderUser();if(window.SalesModule)window.SalesModule.refresh();gsToast('Expense recorded and added to the audit trail.','success');
 }
+
 function exArchive(id){
-    if(!exOwner()){exMessage('Only an owner/co-owner can archive an expense. Records are never deleted.','error');return;}
-    var u=exUser(),next=[],moved=null,i,e;for(i=0;i<exActive.length;i++){e=exActive[i];if(Number(e.expenseId)===Number(id)){moved=e;}else next[next.length]=e;}if(!moved)return;exActive=next;moved.archivedAt=new Date().toISOString();moved.archivedBy=u.userId;moved.archivedByName=u.fullName;exArchived[exArchived.length]=moved;exRender();exMessage('Expense archived. The record remains available for reporting/history.','success');if(window.SalesModule&&window.SalesModule.refresh)window.SalesModule.refresh();
+    if(!exIsOwner())return gsFail('Only an owner/co-owner can archive expense records.');
+    var index=-1,i;for(i=0;i<exExpenses.length;i++)if(Number(exExpenses[i].expenseId)===Number(id)){index=i;break;}
+    if(index<0)return gsFail('Expense not found.');
+    var item=exExpenses[index],next=[];
+    for(i=0;i<exExpenses.length;i++)if(i!==index)next[next.length]=exExpenses[i];
+    exExpenses=next;
+    var u=exCurrentUser();item.archivedAt=new Date().toISOString();item.archivedBy=u?u.userId:null;item.archivedByName=u?u.fullName:'Unknown';exArchived[exArchived.length]=item;
+    exRenderAll();if(window.SalesModule)window.SalesModule.refresh();gsToast('Expense archived. The original record remains in history.','success');return {ok:true};
 }
-function exArchiveAll(){
-    if(!exOwner()){exMessage('Only an owner/co-owner can archive the active expenses.','error');return;}
-    var u=exUser(),i,e;for(i=0;i<exActive.length;i++){e=exActive[i];e.archivedAt=new Date().toISOString();e.archivedBy=u.userId;e.archivedByName=u.fullName;exArchived[exArchived.length]=e;}exActive=[];exRender();exMessage('Active expenses archived. Nothing was deleted.','success');if(window.SalesModule&&window.SalesModule.refresh)window.SalesModule.refresh();
+
+function exAllExpenses(){
+    var all=[],i;for(i=0;i<exExpenses.length;i++)all[all.length]=exExpenses[i];for(i=0;i<exArchived.length;i++)all[all.length]=exArchived[i];return all;
 }
-function exLoadDemo(){
-    window.GSJ.DEMO_MODE=true;if(!window.GSJ.currentUser)window.GSJ.currentUser={userId:3,fullName:'Carlo Santos',username:'carlo',role:'staff'};if(exActive.length>0)return;
-    exActive[0]={expenseId:1,category:'Rent',amount:3000,dateIncurred:exToday(),description:'Monthly stall rent',recordedBy:1,recordedByName:'Margie (Co-owner)',vatIncluded:true,vatAmount:exVat(3000),beforeVat:exBeforeVat(3000)};
-    exActive[1]={expenseId:2,category:'Utilities',amount:850,dateIncurred:exToday(),description:'Electricity',recordedBy:1,recordedByName:'Margie (Co-owner)',vatIncluded:true,vatAmount:exVat(850),beforeVat:exBeforeVat(850)};
-    exActive[2]={expenseId:3,category:'Supplies',amount:1200,dateIncurred:exToday(),description:'Bond paper',recordedBy:2,recordedByName:'Grea (Co-owner)',vatIncluded:true,vatAmount:exVat(1200),beforeVat:exBeforeVat(1200)};
-    exNextId=4;exRender();exMessage('Demo expenses loaded.','success');if(window.SalesModule&&window.SalesModule.refresh)window.SalesModule.refresh();
+function exTotal(){var all=exAllExpenses(),total=0,i;for(i=0;i<all.length;i++)total+=Number(all[i].amount||0);return total;}
+function exVat(total){return Number(total||0)*12/112;}
+
+function exRenderTotals(){
+    var body=document.getElementById('exTotalsBody');if(!body)return;
+    var names=['Rent','Utilities','Supplies','Equipment Repair','Other'],totals=[0,0,0,0,0],all=exAllExpenses(),i,j;
+    for(i=0;i<all.length;i++){
+        for(j=0;j<names.length;j++)if(all[i].category===names[j])totals[j]+=Number(all[i].amount||0);
+    }
+    var html='';for(i=0;i<names.length;i++)html+='<tr><td>'+gsEscapeHtml(names[i])+'</td><td style="text-align:right">'+gsFormatPeso(totals[i])+'</td><td style="text-align:right">'+gsFormatPeso(exVat(totals[i]))+'</td></tr>';
+    body.innerHTML=html;
 }
-function exInit(){
-    exRenderUser();
-    if(!exBound){var form=document.getElementById('exForm');if(form)form.addEventListener('submit',function(e){e.preventDefault();exRecord();});var date=document.getElementById('exDate');if(date&&!date.value)date.value=exToday();exBound=true;}
-    exRender();
+
+function exRenderGrand(){var total=exTotal(),a=document.getElementById('exGrandTotal'),b=document.getElementById('exGrandTax');if(a)a.textContent=gsFormatPeso(total);if(b)b.textContent=gsFormatPeso(exVat(total));}
+function exRenderActive(){
+    var body=document.getElementById('exTableBody');if(!body)return;if(exExpenses.length===0){body.innerHTML=gsEmptyRow(7,'No active expense records.');return;}
+    var html='',i,e;for(i=exExpenses.length-1;i>=0;i--){e=exExpenses[i];html+='<tr><td>'+e.expenseId+'</td><td>'+gsEscapeHtml(e.dateIncurred)+'</td><td>'+gsEscapeHtml(e.category)+'</td><td>'+gsEscapeHtml(e.description)+'</td><td>'+gsFormatPeso(e.amount)+'</td><td>'+gsEscapeHtml(e.recordedByName||'Unknown')+'</td><td><button type="button" class="btn btn-secondary btn-small" data-archive-expense="'+e.expenseId+'">Archive</button></td></tr>';}
+    body.innerHTML=html;
 }
-window.ExpensesModule={init:exInit,record:exRecord,archive:exArchive,archiveAll:exArchiveAll,demoLoad:exLoadDemo,getAllExpenses:function(){var all=[],i;for(i=0;i<exActive.length;i++)all[all.length]=exActive[i];for(i=0;i<exArchived.length;i++)all[all.length]=exArchived[i];return all;},getActiveExpenses:function(){return exActive;},getArchivedExpenses:function(){return exArchived;}};
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',exInit);else exInit();
+function exRenderArchive(){
+    var body=document.getElementById('exArchiveBody');if(!body)return;if(exArchived.length===0){body.innerHTML=gsEmptyRow(8,'No archived expense records yet.');return;}
+    var html='',i,e;for(i=exArchived.length-1;i>=0;i--){e=exArchived[i];html+='<tr><td>'+e.expenseId+'</td><td>'+gsEscapeHtml(e.dateIncurred)+'</td><td>'+gsEscapeHtml(e.category)+'</td><td>'+gsEscapeHtml(e.description)+'</td><td>'+gsFormatPeso(e.amount)+'</td><td>'+gsEscapeHtml(e.recordedByName||'Unknown')+'</td><td>'+gsEscapeHtml(e.archivedByName||'Unknown')+'</td><td>'+gsDateTime(e.archivedAt)+'</td></tr>';}
+    body.innerHTML=html;
+}
+function exRenderAll(){exRenderTotals();exRenderGrand();exRenderActive();exRenderArchive();exRenderUser();}
+
+function exBind(){
+    if(exBound)return;exBound=true;
+    var form=document.getElementById('exForm');if(form)form.addEventListener('submit',function(e){e.preventDefault();exSubmit();});
+    document.addEventListener('click',function(e){var target=e.target;if(target&&target.getAttribute('data-archive-expense')){var result=exArchive(target.getAttribute('data-archive-expense'));if(!result.ok)gsToast(result.error,'error');}});
+}
+function exInit(seed){
+    exExpenses=[];exArchived=[];exNextId=1;var i,e,copy;
+    seed=seed||[];
+    for(i=0;i<seed.length;i++){e=seed[i];copy={};for(var key in e)copy[key]=e[key];exExpenses[exExpenses.length]=copy;if(Number(copy.expenseId)>=exNextId)exNextId=Number(copy.expenseId)+1;}
+    exBind();exSetDate();exRenderAll();
+}
+function exSetUsers(users){exUsers=users||[];exRenderUser();}
+function exDemoArchive(id){return exArchive(id);}
+window.exDemoArchive=function(id){return exDemoArchive(id);};
+window.ExpensesModule={init:exInit,setUsers:exSetUsers,addExpense:exAddExpense,archive:exArchive,getAllExpenses:exAllExpenses,getTotal:exTotal,getVat:exVat,renderAll:exRenderAll,renderUser:exRenderUser,getActiveExpenses:function(){return exExpenses;},getArchivedExpenses:function(){return exArchived;}};
 })();

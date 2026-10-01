@@ -126,6 +126,18 @@ a {
   font-family: inherit;
 }
 
+.app-header .app-nav > a[href="owner-dashboard.html"] { order: 1; }
+.app-header .app-nav > a[href="../rain/order-management.html"] { order: 2; }
+.app-header .app-nav > a[href="../rain/inventory-management.html"] { order: 3; }
+.app-header .app-nav > a[href="../../andrei/module7.html"] { order: 4; }
+.app-header .app-nav > a[href="../../andrei/module8.html"] { order: 5; }
+.app-header .app-nav > a[href="../../andrei/module9.html"] { order: 6; }
+.app-header .app-nav > a[href="../aerica/promotions_Management.html"] { order: 7; }
+.app-header .app-nav > a[href="account-management.html"] { order: 8; }
+.app-header .app-nav > a[href="activity-log.html"] { order: 9; }
+.app-header .app-nav > a[href="../rain/file-and-disposal-handling.html"] { order: 10; }
+.app-header .app-nav > a[href="profile.html"] { order: 11; }
+
 .app-nav a.active,
 .app-nav a:hover,
 .app-nav button:hover,

@@ -1,38 +1,32 @@
-/*
-GREA SAN JAVE — MODULE 7 — PAYMENTS & RECEIPTS
-FINAL PROCEDURAL JAVASCRIPT
+/* ============================================================
+MODULE JAVASCRIPT FILE
+PROCEDURAL JAVASCRIPT
+No CSS is included here.
 
-IMPORTANT ARCHITECTURE
-- Module 6 / Order Placement owns the order records.
-- Module 7 does NOT create orders.
-- Module 7 reads window.GSJ.orders supplied by Module 6.
-- The Order ID connects an order to its payments and receipts.
-- Rush/Regular status is read from the order. It is not entered as a payment field.
-- A valid new payment automatically enters the confirmation queue.
-- Any authorized pending payment may be confirmed. There is NO FIFO rule.
-- Every confirmed payment creates a receipt, including down payments.
-- Records are archived, not deleted.
+DEPENDENCIES:
+This module expects the main system's shared bootstrap/helpers and
+account system to already be loaded (GSJ, gsEscapeHtml, gsFormatPeso,
+gsToast, etc.). Do NOT create a common.js file.
 
-ACCOUNT INTEGRATION
-The login system should set:
-window.GSJ.currentUser = { userId, fullName, role };
-Roles expected: owner or coOwner for owner-level actions, staff for normal staff actions.
+Load this file after the module HTML and after the main shared helpers.
+============================================================ */
 
-CSS
-Load anika.css from the HTML <head>. This JS contains no CSS.
+/* ========================================================================
+   MODULE 7 — PAYMENTS & RECEIPTS
+   PROCEDURAL JAVASCRIPT VERSION
 
-PROCEDURAL RULE
-This file intentionally avoids array convenience methods such as push, pop, shift,
-unshift, splice, indexOf, find, findIndex, filter, reduce, map, forEach, sort,
-trim, concat, and similar methods. Loops and direct array assignment are used.
-*/
+   CSS NOTE:
+   Put anika.css in the <head> of the HTML page. This module contains NO CSS.
+
+   ACCOUNT INTEGRATION NOTE:
+   Your login/account module should set window.GSJ.currentUser before
+   pmInit(...) runs. Do NOT put the demo account switcher in this module.
+   ======================================================================== */
 (function(){
 'use strict';
 
-window.GSJ = window.GSJ || {};
-
 var pmOrders = [];
-var pmQueue = [];
+var pmPending = [];
 var pmPayments = [];
 var pmReceipts = [];
 var pmArchivedPayments = [];
@@ -42,241 +36,355 @@ var pmNextQueueId = 1;
 var pmNextReceiptId = 1;
 var pmBound = false;
 
-function pmEscape(value){
-    var s=String(value==null?'':value),out='',i,c;
-    for(i=0;i<s.length;i++){c=s[i];if(c==='&')out+='&amp;';else if(c==='<')out+='&lt;';else if(c==='>')out+='&gt;';else if(c==='"')out+='&quot;';else if(c==="'")out+='&#39;';else out+=c;}
-    return out;
-}
-function pmPad(n){return n<10?'0'+n:String(n);}
-function pmToday(){var d=new Date();return d.getFullYear()+'-'+pmPad(d.getMonth()+1)+'-'+pmPad(d.getDate());}
-function pmNow(){return new Date().toISOString();}
-function pmMoney(value){var n=Number(value||0);if(!isFinite(n))n=0;return Math.round(n*100)/100;}
-function pmPeso(value){
-    var n=pmMoney(value),neg=n<0;if(neg)n=-n;
-    var whole=Math.floor(n),cent=Math.round((n-whole)*100),raw=String(whole),out='',i;
-    if(cent===100){whole++;cent=0;raw=String(whole);}
-    for(i=raw.length-1;i>=0;i--){out=raw[i]+out;if((raw.length-i)%3===0&&i!==0)out=','+out;}
-    return neg?'₱-'+out+'.'+pmPad(cent):'₱'+out+'.'+pmPad(cent);
-}
-function pmUser(){return window.GSJ && window.GSJ.currentUser ? window.GSJ.currentUser : null;}
-function pmIsOwner(){var u=pmUser();return !!u && (u.role==='owner'||u.role==='coOwner'||u.role==='ownerAdmin');}
-function pmOrdersSource(){
-    if(window.GSJ && window.GSJ.orders) return window.GSJ.orders;
-    if(window.gsOrders) return window.gsOrders;
-    return [];
-}
-function pmFindOrder(id){var i;for(i=0;i<pmOrders.length;i++)if(Number(pmOrders[i].orderId)===Number(id))return pmOrders[i];return null;}
-function pmConfirmedTotal(id){var total=0,i;for(i=0;i<pmPayments.length;i++)if(Number(pmPayments[i].orderId)===Number(id))total+=Number(pmPayments[i].amount||0);return pmMoney(total);}
-function pmQueuedTotal(id){var total=0,i;for(i=0;i<pmQueue.length;i++)if(Number(pmQueue[i].orderId)===Number(id))total+=Number(pmQueue[i].amount||0);return pmMoney(total);}
-function pmBalance(id){var o=pmFindOrder(id);if(!o)return 0;return pmMoney(Number(o.totalPrice||0)-pmConfirmedTotal(id)-pmQueuedTotal(id));}
-function pmDisplayName(o){return o.customerName||o.customer||'—';}
-function pmOrderType(o){return o.isRush?'Rush':'Regular';}
-function pmUserName(){var u=pmUser();return u?u.fullName:'Not signed in';}
-function pmSetText(id,value){var e=document.getElementById(id);if(e)e.textContent=value;}
-function pmMessage(text,type){var e=document.getElementById('pmMessage');if(e){e.textContent=text||'';e.className='field-message '+(type==='error'?'error':'success');}}
-
-function pmRefreshOrders(){
-    var source=pmOrdersSource(),next=[],i;
-    for(i=0;i<source.length;i++)next[i]=source[i];
-    pmOrders=next;
-    pmRenderOrderCards();
-    pmRenderQueue();
-    pmRenderConfirmed();
-    pmUpdateCounters();
+function pmCurrentUser(){
+    if (window.GSJ && window.GSJ.currentUser) return window.GSJ.currentUser;
+    return null;
 }
 
-function pmOrderIsPayable(o){
-    if(!o)return false;
-    var status=String(o.status||'').toLowerCase();
-    if(status==='cancelled'||status==='canceled')return false;
-    return Number(o.totalPrice||0)>pmConfirmedTotal(o.orderId)+pmQueuedTotal(o.orderId);
-}
-
-function pmRenderOrderCards(){
-    var body=document.getElementById('pmOrdersBody');if(!body)return;
-    var html='',i,o,balance;
+function pmFindOrder(orderId){
+    var i;
     for(i=0;i<pmOrders.length;i++){
-        o=pmOrders[i];
-        if(!pmOrderIsPayable(o))continue;
-        balance=pmBalance(o.orderId);
-        html+='<tr><td>#'+pmEscape(o.orderId)+'</td><td>'+pmEscape(pmDisplayName(o))+'</td><td>'+pmPeso(o.totalPrice)+'</td><td>'+pmPeso(pmConfirmedTotal(o.orderId))+'</td><td>'+pmPeso(balance)+'</td><td>'+pmOrderType(o)+'</td><td><button type="button" class="btn btn-primary btn-small" onclick="PaymentsModule.openPayment('+Number(o.orderId)+')">Receive payment</button></td></tr>';
+        if(Number(pmOrders[i].orderId)===Number(orderId)) return pmOrders[i];
     }
-    if(html==='')html='<tr><td colspan="7">No orders with an outstanding balance were found.</td></tr>';
-    body.innerHTML=html;
+    return null;
 }
 
-function pmOpenPayment(orderId){
-    var o=pmFindOrder(orderId);if(!o)return;
-    var panel=document.getElementById('pmPaymentPanel');
-    if(panel)panel.hidden=false;
-    pmSetText('pmSelectedOrder','#'+o.orderId+' — '+pmDisplayName(o));
-    pmSetText('pmSelectedTotal',pmPeso(o.totalPrice));
-    pmSetText('pmSelectedPaid',pmPeso(pmConfirmedTotal(o.orderId)));
-    pmSetText('pmSelectedBalance',pmPeso(pmBalance(o.orderId)));
-    pmSetText('pmSelectedType',pmOrderType(o)+' order');
-    var id=document.getElementById('pmSelectedOrderId');if(id)id.value=o.orderId;
-    var amount=document.getElementById('pmPaymentAmount');if(amount){amount.value='';amount.max=String(pmBalance(o.orderId));}
-    var down=document.getElementById('pmIsDown');if(down)down.checked=false;
-    var method=document.getElementById('pmPaymentMethod');if(method)method.value='Cash';
-    pmUpdateProof();
-}
-function pmClosePayment(){var p=document.getElementById('pmPaymentPanel');if(p)p.hidden=true;pmMessage('','');}
-
-function pmUpdateProof(){
-    var method=document.getElementById('pmPaymentMethod'),wrap=document.getElementById('pmProofWrap'),proof=document.getElementById('pmProof');
-    var need=method && (method.value==='GCash'||method.value==='Bank Transfer');
-    if(wrap)wrap.hidden=!need;
-    if(proof)proof.required=!!need;
-}
-
-function pmRecordPaymentFromForm(){
-    var id=document.getElementById('pmSelectedOrderId');
-    var amount=document.getElementById('pmPaymentAmount');
-    var method=document.getElementById('pmPaymentMethod');
-    var down=document.getElementById('pmIsDown');
-    var proof=document.getElementById('pmProof');
-    if(!id||!amount||!method)return;
-    var order=pmFindOrder(id.value);
-    if(!order){pmMessage('The selected order no longer exists.','error');return;}
-    var value=Number(amount.value||0),balance=pmBalance(order.orderId);
-    if(value<=0){pmMessage('Payment amount must be greater than zero.','error');return;}
-    if(value>balance){pmMessage('Payment cannot exceed the remaining balance of '+pmPeso(balance)+'.','error');return;}
-    if(value<balance && !down.checked){pmMessage('A payment below the full balance must be marked as a down payment.','error');return;}
-    if(value>=balance && down.checked){pmMessage('A full-balance payment cannot be marked as a down payment.','error');return;}
-    if(method.value==='GCash'||method.value==='Bank Transfer'){
-        if(!proof || !proof.files || proof.files.length===0){pmMessage('Proof of payment is required for '+method.value+'.','error');return;}
+function pmConfirmedTotal(orderId){
+    var total=0,i;
+    for(i=0;i<pmPayments.length;i++){
+        if(Number(pmPayments[i].orderId)===Number(orderId)) total += Number(pmPayments[i].amount||0);
     }
-    var u=pmUser();
-    if(!u){pmMessage('Please sign in before recording a payment.','error');return;}
+    return total;
+}
+
+function pmPendingTotal(orderId){
+    var total=0,i;
+    for(i=0;i<pmPending.length;i++){
+        if(Number(pmPending[i].orderId)===Number(orderId)) total += Number(pmPending[i].amount||0);
+    }
+    return total;
+}
+
+function pmRemaining(orderId){
+    var order=pmFindOrder(orderId);
+    if(!order) return 0;
+    return Number(order.totalPrice||0)-pmConfirmedTotal(orderId)-pmPendingTotal(orderId);
+}
+
+/* Module 6 is the source of orders and payment-entry input.
+   Module 7 keeps the public recordPayment(...) function so Module 6 can call it. */
+function pmSetOrders(orders){
+    pmOrders=orders||[];
+    pmRenderAll();
+}
+
+/* Kept as a compatibility function for the existing bootstrap.
+   There is intentionally no payment-entry form inside Module 7. */
+function pmPopulateOrders(){
+    return pmOrders;
+}
+
+function pmRecordPayment(data){
+    var order=pmFindOrder(data.orderId);
+    var amount=Number(data.amount);
+    var method=data.paymentMethod;
+    var proof=data.proofOfPaymentFile||'';
+    var user=pmCurrentUser();
+    if(!order) return gsFail('Please select a valid unpaid order.');
+    if(!isFinite(amount) || amount<=0) return gsFail('Payment amount must be greater than zero.');
+    if(method!=='Cash' && method!=='GCash' && method!=='Bank Transfer') return gsFail('Invalid payment method.');
+    if((method==='GCash' || method==='Bank Transfer') && !proof) return gsFail('Proof of payment is required for GCash or Bank Transfer.');
+    var remaining=pmRemaining(order.orderId);
+    if(remaining<=0.009) return gsFail('This order is already fully paid.');
+    if(amount>remaining+0.009) return gsFail('Payment cannot exceed the remaining balance of '+gsFormatPeso(remaining)+'.');
+    if(data.isDownPayment && amount>=Number(order.totalPrice||0)) return gsFail('A down payment must be less than the order total.');
+
     var payment={
-        queueId:pmNextQueueId++,paymentId:pmNextPaymentId++,orderId:Number(order.orderId),customerName:pmDisplayName(order),amount:pmMoney(value),paymentMethod:method.value,
-        isDownPayment:!!down.checked,isRush:!!order.isRush,recordedBy:u.userId,recordedByName:u.fullName,dateRecorded:pmNow(),proofOfPaymentFile:proof&&proof.files&&proof.files.length>0?proof.files[0].name:'',status:'pending'
+        queueId:'Q'+pmNextQueueId+'_'+Date.now(),
+        orderId:Number(order.orderId),
+        customerName:order.customerName||'Customer',
+        amount:amount,
+        paymentMethod:method,
+        isDownPayment:!!data.isDownPayment,
+        isRush:!!order.isRush,
+        proofOfPaymentFile:proof,
+        submittedBy:user ? user.userId : null,
+        submittedByName:user ? user.fullName : 'Unknown',
+        dateSubmitted:new Date().toISOString()
     };
-    pmQueue[pmQueue.length]=payment;
-    pmRenderQueue();pmUpdateCounters();pmMessage('Payment added to the confirmation queue.','success');
-    if(window.SalesModule&&window.SalesModule.refresh)window.SalesModule.refresh();
+    pmNextQueueId++;
+    pmPending[pmPending.length]=payment;
+    pmRenderAll();
+    return {ok:true,pending:payment};
+}
+
+function pmCreateReceipt(order,payment,remaining){
+    var receipt={
+        receiptId:pmNextReceiptId++,
+        paymentId:payment.paymentId,
+        orderId:order.orderId,
+        customerName:order.customerName||'Customer',
+        fileName:order.fileName||'',
+        serviceType:order.serviceType||'',
+        pages:order.pages||0,
+        copies:order.copies||0,
+        colorTier:order.colorTier||'',
+        orderType:order.isRush?'Rush':'Regular',
+        totalPrice:Number(order.totalPrice||0),
+        amount:payment.amount,
+        remainingBalance:remaining<0?0:remaining,
+        paymentMethod:payment.paymentMethod,
+        isDownPayment:payment.isDownPayment,
+        status:remaining<=0.009?'PAID IN FULL':'PARTIAL PAYMENT',
+        recordedByName:payment.submittedByName,
+        confirmedByName:payment.confirmedByName,
+        dateIssued:payment.dateReceived
+    };
+    pmReceipts[pmReceipts.length]=receipt;
+    return receipt;
 }
 
 function pmConfirmPayment(queueId){
-    var pos=-1,i,p;
-    for(i=0;i<pmQueue.length;i++)if(Number(pmQueue[i].queueId)===Number(queueId)){pos=i;break;}
-    if(pos<0)return;
-    p=pmQueue[pos];
-    var u=pmUser();
-    if(!u){pmMessage('Please sign in before confirming a payment.','error');return;}
-    if(!pmIsOwner() && Number(u.userId)!==Number(p.recordedBy)){
-        pmMessage('Only the recording staff member or an owner/co-owner can confirm this payment.','error');return;
+    var position=-1,i;
+    for(i=0;i<pmPending.length;i++){
+        if(String(pmPending[i].queueId)===String(queueId)){position=i;break;}
     }
-    var next=[],j;for(j=0;j<pmQueue.length;j++)if(j!==pos)next[next.length]=pmQueue[j];pmQueue=next;
-    p.status='confirmed';p.confirmedBy=u.userId;p.confirmedByName=u.fullName;p.dateReceived=pmNow();
-    pmPayments[pmPayments.length]=p;
-    var order=pmFindOrder(p.orderId);
-    if(order){
-        var paid=pmConfirmedTotal(p.orderId),total=Number(order.totalPrice||0);
-        order.amountPaid=paid;order.remainingBalance=pmMoney(total-paid);
-        order.paymentStatus=paid>=total?'paid':'partial';
-    }
-    pmCreateReceipt(p,order);
+    if(position<0) return gsFail('Payment is no longer in the queue.');
+
+    var q=pmPending[position];
+    var order=pmFindOrder(q.orderId);
+    if(!order) return gsFail('The linked order no longer exists.');
+    if(order.status==='cancelled') return gsFail('This order is cancelled and the payment cannot be confirmed.');
+    var currentPaid=pmConfirmedTotal(order.orderId);
+    var orderTotal=Number(order.totalPrice||0);
+    if(currentPaid+Number(q.amount||0)>orderTotal+0.009) return gsFail('The queued payment is now greater than the remaining balance.');
+    var user=pmCurrentUser();
+    var payment={
+        paymentId:pmNextPaymentId++,
+        orderId:q.orderId,
+        customerName:q.customerName,
+        amount:q.amount,
+        paymentMethod:q.paymentMethod,
+        isDownPayment:q.isDownPayment,
+        isRush:!!order.isRush,
+        proofOfPaymentFile:q.proofOfPaymentFile||null,
+        submittedBy:q.submittedBy,
+        submittedByName:q.submittedByName,
+        confirmedBy:user ? user.userId : null,
+        confirmedByName:user ? user.fullName : 'Unknown',
+        dateReceived:new Date().toISOString()
+    };
+
+    var newPending=[];
+    for(i=0;i<pmPending.length;i++) if(i!==position) newPending[newPending.length]=pmPending[i];
+    pmPending=newPending;
+    pmPayments[pmPayments.length]=payment;
+
+    var paid=pmConfirmedTotal(order.orderId);
+    var total=Number(order.totalPrice||0);
+    order.paymentStatus=paid>=total-0.009?'fullyPaid':'downPaymentPaid';
+    order.downPaymentAmount=paid;
+    pmCreateReceipt(order,payment,total-paid);
     pmRenderAll();
-    if(window.SalesModule&&window.SalesModule.refresh)window.SalesModule.refresh();
-    pmMessage('Payment confirmed and receipt created.','success');
+    pmPopulateOrders();
+    if(window.SalesModule && window.SalesModule.refresh) window.SalesModule.refresh();
+    if(window.gsNotifyOrdersChanged) window.gsNotifyOrdersChanged();
+    gsToast('Payment confirmed. '+(paid>=total-0.009?'Order is fully paid.':'Remaining balance: '+gsFormatPeso(total-paid)+'.'),'success');
+    return {ok:true,payment:payment};
 }
 
-function pmCreateReceipt(payment,order){
-    var receipt={receiptId:pmNextReceiptId++,paymentId:payment.paymentId,orderId:payment.orderId,customerName:payment.customerName,amount:payment.amount,paymentMethod:payment.paymentMethod,isDownPayment:payment.isDownPayment,isRush:order?!!order.isRush:!!payment.isRush,orderTotal:order?Number(order.totalPrice||0):0,remainingBalance:order?pmMoney(Number(order.totalPrice||0)-pmConfirmedTotal(order.orderId)):0,serviceType:order?(order.serviceType||'Printing service'):'Printing service',pages:order?order.pages:'',copies:order?order.copies:'',colorTier:order?order.colorTier:'',fileName:order?order.fileName:'',dateReceived:payment.dateReceived,recordedByName:payment.recordedByName,confirmedByName:payment.confirmedByName};
-    pmReceipts[pmReceipts.length]=receipt;
-}
-
-function pmRenderQueue(){
-    var body=document.getElementById('pmQueueBody');if(!body)return;
-    var html='',i,p;
-    for(i=0;i<pmQueue.length;i++){
-        p=pmQueue[i];
-        html+='<tr><td>#'+p.queueId+'</td><td>#'+p.orderId+'</td><td>'+pmEscape(p.customerName)+'</td><td>'+pmPeso(p.amount)+'</td><td>'+pmEscape(p.paymentMethod)+'</td><td>'+(p.isDownPayment?'Down payment':'Payment')+'</td><td>'+pmEscape(p.isRush?'Rush':'Regular')+'</td><td><button type="button" class="btn btn-primary btn-small" onclick="PaymentsModule.confirmPayment('+p.queueId+')">Confirm</button></td></tr>';
-    }
-    if(html==='')html='<tr><td colspan="8">No payments are waiting for confirmation.</td></tr>';
-    body.innerHTML=html;
-}
-
-function pmRenderConfirmed(){
-    var body=document.getElementById('pmConfirmedBody');if(!body)return;
-    var html='',i,p,r;
-    for(i=0;i<pmPayments.length;i++){
-        p=pmPayments[i];r=pmReceiptForPayment(p.paymentId);
-        html+='<tr><td>#'+p.orderId+'</td><td>'+pmEscape(p.customerName)+'</td><td>'+pmPeso(p.amount)+'</td><td>'+pmEscape(p.paymentMethod)+'</td><td>'+pmEscape(p.isRush?'Rush':'Regular')+'</td><td>'+pmEscape(p.confirmedByName||p.recordedByName)+'</td><td><button type="button" class="btn btn-secondary btn-small" onclick="PaymentsModule.printReceipt('+p.paymentId+')">Print receipt</button></td></tr>';
-    }
-    if(html==='')html='<tr><td colspan="7">No confirmed payments for the active view.</td></tr>';
-    body.innerHTML=html;
-}
-function pmReceiptForPayment(paymentId){var i;for(i=0;i<pmReceipts.length;i++)if(Number(pmReceipts[i].paymentId)===Number(paymentId))return pmReceipts[i];return null;}
-
-function pmPrintReceipt(paymentId){
-    var r=pmReceiptForPayment(paymentId);if(!r)return;
-    var w=window.open('','_blank','width=480,height=720');if(!w)return;
-    var vat=pmMoney(r.orderTotal*12/112),before=pmMoney(r.orderTotal-vat);
-    var html='<!doctype html><html><head><title>Receipt #'+r.receiptId+'</title><style>body{font-family:Arial,sans-serif;margin:0;padding:20px;background:white;color:#111}.receipt{width:360px;margin:auto}.center{text-align:center}.line{border-top:1px dashed #777;margin:12px 0}.row{display:flex;justify-content:space-between;gap:20px;margin:6px 0}.total{font-size:20px;font-weight:bold}.small{font-size:12px;color:#555}</style></head><body><div class="receipt"><div class="center"><h2>Grea San Jave</h2><div>Printing Services</div><div>Payment Receipt #'+r.receiptId+'</div></div><div class="line"></div><div>Order: #'+r.orderId+'</div><div>Customer: '+pmEscape(r.customerName)+'</div><div>Service: '+pmEscape(r.serviceType)+'</div><div>File: '+pmEscape(r.fileName||'—')+'</div><div>Order type: '+pmEscape(r.isRush?'Rush':'Regular')+'</div><div class="line"></div><div class="row"><span>Order total</span><span>'+pmPeso(r.orderTotal)+'</span></div><div class="row"><span>VAT included (12%)</span><span>'+pmPeso(vat)+'</span></div><div class="row"><span>Before VAT</span><span>'+pmPeso(before)+'</span></div><div class="row total"><span>Payment received</span><span>'+pmPeso(r.amount)+'</span></div><div class="row"><span>Remaining balance</span><span>'+pmPeso(r.remainingBalance)+'</span></div><div class="row"><span>Method</span><span>'+pmEscape(r.paymentMethod)+'</span></div><div class="row"><span>Payment type</span><span>'+pmEscape(r.isDownPayment?'Down payment':'Full/regular payment')+'</span></div><div class="line"></div><div class="small">Recorded by: '+pmEscape(r.recordedByName||'—')+'</div><div class="small">Confirmed by: '+pmEscape(r.confirmedByName||'—')+'</div><div class="small">Received: '+pmEscape(r.dateReceived||'—')+'</div><div class="center small" style="margin-top:20px">Thank you.</div></div><script>window.onload=function(){window.print();};<\/script></body></html>';
-    w.document.open();w.document.write(html);w.document.close();
+function pmConfirmNext(){
+    if(pmPending.length===0) return gsFail('No payments are waiting for confirmation.');
+    return pmConfirmPayment(pmPending[0].queueId);
 }
 
 function pmArchiveDay(){
-    var u=pmUser();if(!pmIsOwner()){pmMessage('Only an owner/co-owner can archive the active day.','error');return;}
-    var now=pmNow(),next=[],i,p,r;
-    for(i=0;i<pmPayments.length;i++){p=pmPayments[i];p.archivedAt=now;p.archivedBy=u.userId;p.archivedByName=u.fullName;pmArchivedPayments[pmArchivedPayments.length]=p;}
-    pmPayments=next;
-    for(i=0;i<pmReceipts.length;i++){r=pmReceipts[i];r.archivedAt=now;r.archivedBy=u.userId;r.archivedByName=u.fullName;pmArchivedReceipts[pmArchivedReceipts.length]=r;}
-    pmReceipts=[];
+    var user=pmCurrentUser();
+    if(!user || user.role!=='coOwner') return gsFail('Owner permission required.');
+    var now=new Date().toISOString();
+    var i,p,r;
+    for(i=0;i<pmPayments.length;i++){
+        p=pmPayments[i];p.archivedAt=now;p.archivedBy=user.userId;p.archivedByName=user.fullName;
+        pmArchivedPayments[pmArchivedPayments.length]=p;
+    }
+    for(i=0;i<pmReceipts.length;i++){
+        r=pmReceipts[i];r.archivedAt=now;r.archivedBy=user.userId;r.archivedByName=user.fullName;
+        pmArchivedReceipts[pmArchivedReceipts.length]=r;
+    }
+    pmPayments=[];pmReceipts=[];
     pmRenderAll();
-    if(window.SalesModule&&window.SalesModule.refresh)window.SalesModule.refresh();
-    pmMessage('Confirmed payments and receipts were archived. Nothing was deleted.','success');
+    if(window.SalesModule && window.SalesModule.refresh) window.SalesModule.refresh();
+    gsToast('Confirmed payments and receipts were archived. Nothing was deleted.','success');
+    return {ok:true};
 }
 
-function pmUpdateCounters(){
-    pmSetText('pmQueueCount',pmQueue.length);
-    pmSetText('pmConfirmedCount',pmPayments.length);
-    pmSetText('pmArchivedCount',pmArchivedPayments.length);
+function pmReceiptBreakdown(receipt){
+    var total=Number(receipt.totalPrice||0);
+    var vat=total*12/112;
+    var beforeVat=total-vat;
+    var text='<div class="receipt-paper">';
+    text+='<img class="receipt-logo" src="grea_logo.jpg" alt="Grea San Jave">';
+    text+='<h2>Grea San Jave</h2><h3>Payment Receipt</h3>';
+    text+='<div class="receipt-meta">Receipt #: '+receipt.receiptId+'<br>Order #: '+receipt.orderId+'<br>Customer: '+gsEscapeHtml(receipt.customerName)+'<br>Date: '+gsDateTime(receipt.dateIssued)+'</div>';
+    text+='<hr><strong>Order details</strong>';
+    text+='<p>Service: '+gsEscapeHtml(receipt.serviceType||'—')+'<br>File: '+gsEscapeHtml(receipt.fileName||'—')+'<br>Pages: '+receipt.pages+'<br>Copies: '+receipt.copies+'<br>Color: '+gsEscapeHtml(receipt.colorTier||'—')+'<br>Order type: '+gsEscapeHtml(receipt.orderType)+'</p>';
+    text+='<hr><strong>Price breakdown</strong>';
+    text+='<div class="receipt-line"><span>Price before VAT</span><span>'+gsFormatPeso(beforeVat)+'</span></div>';
+    text+='<div class="receipt-line"><span>VAT included (12%)</span><span>'+gsFormatPeso(vat)+'</span></div>';
+    text+='<div class="receipt-total"><span>Order total</span><span>'+gsFormatPeso(total)+'</span></div>';
+    text+='<hr><strong>Payment</strong>';
+    text+='<div class="receipt-line"><span>Payment received</span><span>'+gsFormatPeso(receipt.amount)+'</span></div>';
+    text+='<div class="receipt-line"><span>Method</span><span>'+gsEscapeHtml(receipt.paymentMethod)+'</span></div>';
+    text+='<div class="receipt-line"><span>Remaining balance</span><span>'+gsFormatPeso(receipt.remainingBalance)+'</span></div>';
+    text+='<div class="receipt-status">'+gsEscapeHtml(receipt.status)+'</div>';
+    text+='<p class="audit-note">Recorded by: '+gsEscapeHtml(receipt.recordedByName||'Unknown')+'<br>Confirmed by: '+gsEscapeHtml(receipt.confirmedByName||'Unknown')+'</p>';
+    text+='</div>';
+    return text;
 }
-function pmRenderAll(){pmRefreshOrders();}
 
-function pmDemoLoad(){
-    window.GSJ.DEMO_MODE=true;
-    if(!window.GSJ.currentUser)window.GSJ.currentUser={userId:3,fullName:'Carlo Santos',username:'carlo',role:'staff'};
-    if(!window.GSJ.orders || window.GSJ.orders.length===0){
-        window.GSJ.orders=[
-            {orderId:101,customerName:'Ana Cruz',fileName:'thesis.pdf',serviceType:'Document Printing',pages:20,copies:5,colorTier:'Minimal Color',isRush:false,totalPrice:300,status:'done',paymentStatus:'unpaid',dateAdded:pmToday(),dateCompleted:pmToday()},
-            {orderId:102,customerName:'Ben Santos',fileName:'research.pdf',serviceType:'Document Printing',pages:50,copies:1,colorTier:'Black Text',isRush:false,totalPrice:500,status:'done',paymentStatus:'unpaid',dateAdded:pmToday(),dateCompleted:pmToday()},
-            {orderId:103,customerName:'Clara Reyes',fileName:'portfolio.pdf',serviceType:'Document Printing',pages:32,copies:2,colorTier:'Full Color',isRush:true,totalPrice:640,status:'done',paymentStatus:'unpaid',dateAdded:pmToday(),dateCompleted:pmToday()},
-            {orderId:108,customerName:'Hannah Lim',fileName:'flyers.pdf',serviceType:'Document Printing',pages:60,copies:3,colorTier:'Full Color',isRush:true,totalPrice:3100,status:'done',paymentStatus:'unpaid',dateAdded:pmToday(),dateCompleted:pmToday()}
-        ];
+function pmShowReceipt(receiptId){
+    var i,r=null;
+    for(i=0;i<pmReceipts.length;i++) if(Number(pmReceipts[i].receiptId)===Number(receiptId)) r=pmReceipts[i];
+    if(!r) for(i=0;i<pmArchivedReceipts.length;i++) if(Number(pmArchivedReceipts[i].receiptId)===Number(receiptId)) r=pmArchivedReceipts[i];
+    if(!r){gsToast('Receipt not found.','error');return;}
+    var body=document.getElementById('receiptModalBody');
+    var modal=document.getElementById('receiptModal');
+    if(body) body.innerHTML=pmReceiptBreakdown(r);
+    if(modal){modal.classList.add('open');modal.setAttribute('aria-hidden','false');}
+}
+
+function pmCloseReceipt(){
+    var modal=document.getElementById('receiptModal');
+    if(modal){modal.classList.remove('open');modal.setAttribute('aria-hidden','true');}
+}
+
+function pmRenderPending(){
+    var body=document.getElementById('pmPendingBody');if(!body)return;
+    if(pmPending.length===0){body.innerHTML=gsEmptyRow(8,'No payments waiting for confirmation.');return;}
+    var html='',i,p;
+    for(i=0;i<pmPending.length;i++){
+        p=pmPending[i];
+        html+='<tr><td>'+(i+1)+'</td><td>#'+p.orderId+'</td><td>'+gsEscapeHtml(p.customerName)+'</td><td>'+gsFormatPeso(p.amount)+'</td><td>'+gsEscapeHtml(p.paymentMethod)+'</td><td>'+(p.isRush?'Rush':'Regular')+(p.isDownPayment?' / Down payment':' / Full')+'</td><td><button type="button" class="btn btn-success btn-small" data-confirm-payment="'+gsEscapeHtml(p.queueId)+'">Confirm</button></td></tr>';
     }
-    pmRefreshOrders();
-    pmMessage('Demo orders loaded. In the real system these records will come from Module 6.','success');
+    body.innerHTML=html;
 }
 
-function pmInit(){
-    pmOrders=pmOrdersSource();
-    if(!pmBound){
-        var method=document.getElementById('pmPaymentMethod');if(method)method.addEventListener('change',pmUpdateProof);
-        var form=document.getElementById('pmPaymentForm');if(form)form.addEventListener('submit',function(e){e.preventDefault();pmRecordPaymentFromForm();});
-        pmBound=true;
+function pmRenderPayments(){
+    var body=document.getElementById('pmPaymentsBody');if(!body)return;
+    if(pmPayments.length===0){body.innerHTML=gsEmptyRow(9,'No active confirmed payments.');return;}
+    var html='',i,p,r;
+    for(i=0;i<pmPayments.length;i++){
+        p=pmPayments[i];r=null;
+        var j;for(j=0;j<pmReceipts.length;j++)if(Number(pmReceipts[j].paymentId)===Number(p.paymentId)){r=pmReceipts[j];break;}
+        html+='<tr><td>'+p.paymentId+'</td><td>#'+p.orderId+'</td><td>'+gsEscapeHtml(p.customerName||'—')+'</td><td>'+gsFormatPeso(p.amount)+'</td><td>'+gsEscapeHtml(p.paymentMethod)+'</td><td>'+(p.isRush?'Rush':'Regular')+(p.isDownPayment?' / Down payment':' / Full')+'</td><td>'+(r?gsEscapeHtml(r.status):'Confirmed')+'</td><td>'+gsDateTime(p.dateReceived)+'</td><td>'+(r?'<button type="button" class="btn btn-secondary btn-small" data-view-receipt="'+r.receiptId+'">Print receipt</button>':'—')+'</td></tr>';
     }
-    pmRefreshOrders();
+    body.innerHTML=html;
 }
+
+function pmRenderReceipts(){
+    var body=document.getElementById('pmReceiptsBody');if(!body)return;
+    if(pmReceipts.length===0){body.innerHTML=gsEmptyRow(8,'No active receipts. A receipt is created for every confirmed payment, including down payments.');return;}
+    var html='',i,r;
+    for(i=0;i<pmReceipts.length;i++){
+        r=pmReceipts[i];
+        html+='<tr><td>#'+r.receiptId+'</td><td>#'+r.orderId+'</td><td>'+gsEscapeHtml(r.customerName)+'</td><td>'+gsFormatPeso(r.amount)+'</td><td>'+gsFormatPeso(r.remainingBalance)+'</td><td>'+gsEscapeHtml(r.orderType)+'</td><td>'+gsEscapeHtml(r.status)+'</td><td><button type="button" class="btn btn-secondary btn-small" data-view-receipt="'+r.receiptId+'">View / Print</button></td></tr>';
+    }
+    body.innerHTML=html;
+}
+
+function pmRenderArchive(){
+    var body=document.getElementById('pmArchiveBody');if(!body)return;
+    if(pmArchivedPayments.length===0 && pmArchivedReceipts.length===0){body.innerHTML=gsEmptyRow(6,'No archived payment or receipt records yet.');return;}
+    var html='',i,p,r;
+    for(i=0;i<pmArchivedPayments.length;i++){p=pmArchivedPayments[i];html+='<tr><td>Payment</td><td>'+p.paymentId+'</td><td>#'+p.orderId+'</td><td>'+gsFormatPeso(p.amount)+'</td><td>'+gsEscapeHtml(p.archivedByName||'Unknown')+'</td><td>'+gsDateTime(p.archivedAt)+'</td></tr>';}
+    for(i=0;i<pmArchivedReceipts.length;i++){r=pmArchivedReceipts[i];html+='<tr><td>Receipt</td><td>'+r.receiptId+'</td><td>#'+r.orderId+'</td><td>'+gsFormatPeso(r.amount)+'</td><td>'+gsEscapeHtml(r.archivedByName||'Unknown')+'</td><td>'+gsDateTime(r.archivedAt)+'</td></tr>';}
+    body.innerHTML=html;
+}
+
+function pmRenderAll(){pmRenderPending();pmRenderPayments();pmRenderArchive();}
+
+function pmBind(){
+    if(pmBound)return;
+    pmBound=true;
+    var archive=document.getElementById('btnArchivePaymentDay');
+    if(archive)archive.addEventListener('click',pmArchiveDay);
+    var print=document.getElementById('btnPrintReceipt');
+    if(print)print.addEventListener('click',function(){
+        var main=document.querySelector('main');
+        var header=document.querySelector('.app-header');
+        var demo=document.getElementById('demoToolsBottom');
+        if(main)main.style.display='none';
+        if(header)header.style.display='none';
+        if(demo)demo.style.display='none';
+        var modal=document.getElementById('receiptModal');
+        if(modal){modal.classList.add('open');modal.style.display='flex';modal.style.position='static';modal.style.background='#fff';modal.style.padding='0';}
+        window.print();
+    });
+    window.addEventListener('afterprint',function(){
+        var main=document.querySelector('main');
+        var header=document.querySelector('.app-header');
+        var demo=document.getElementById('demoToolsBottom');
+        if(main)main.style.display='';
+        if(header)header.style.display='';
+        if(demo)demo.style.display='';
+    });
+    var close=document.getElementById('btnCloseReceipt');
+    if(close)close.addEventListener('click',pmCloseReceipt);
+    document.addEventListener('click',function(e){
+        var target=e.target;
+        if(target && target.getAttribute('data-confirm-payment')) pmConfirmPayment(target.getAttribute('data-confirm-payment'));
+        if(target && target.getAttribute('data-view-receipt')) pmShowReceipt(target.getAttribute('data-view-receipt'));
+    });
+}
+
+function pmInit(orders){
+    pmOrders=orders||[];pmPending=[];pmPayments=[];pmReceipts=[];pmArchivedPayments=[];pmArchivedReceipts=[];pmNextPaymentId=1;pmNextQueueId=1;pmNextReceiptId=1;
+    pmBind();pmRenderAll();
+}
+
+function pmSeedConfirmedPayment(orderId,amount,method,isDown,proof){
+    var result=pmRecordPayment({orderId:orderId,amount:amount,paymentMethod:method,isDownPayment:isDown,proofOfPaymentFile:proof||''});
+    if(result.ok) pmConfirmNext();
+    return result;
+}
+
+/* DEMO TOOL HOOKS — actual demo data belongs in the separate bootstrap file. */
+window.pmDemoConfirmNext=function(){return pmConfirmNext();};
+window.pmDemoArchiveDay=function(){return pmArchiveDay();};
+window.pmDemoArchiveOne=function(orderId){
+    var u=pmCurrentUser();if(!u||u.role!=='coOwner')return gsFail('Owner permission required.');
+    var now=new Date().toISOString(),next=[],i,p,r;
+    for(i=0;i<pmPayments.length;i++){
+        p=pmPayments[i];
+        if(Number(p.orderId)===Number(orderId)){p.archivedAt=now;p.archivedBy=u.userId;p.archivedByName=u.fullName;pmArchivedPayments[pmArchivedPayments.length]=p;}
+        else next[next.length]=p;
+    }
+    pmPayments=next;
+    next=[];
+    for(i=0;i<pmReceipts.length;i++){
+        r=pmReceipts[i];
+        if(Number(r.orderId)===Number(orderId)){r.archivedAt=now;r.archivedBy=u.userId;r.archivedByName=u.fullName;pmArchivedReceipts[pmArchivedReceipts.length]=r;}
+        else next[next.length]=r;
+    }
+    pmReceipts=next;pmRenderAll();return {ok:true};
+};
 
 window.PaymentsModule={
     init:pmInit,
-    refresh:pmRefreshOrders,
-    openPayment:pmOpenPayment,
-    closePayment:pmClosePayment,
-    recordPayment:pmRecordPaymentFromForm,
+    recordPayment:pmRecordPayment,
     confirmPayment:pmConfirmPayment,
-    printReceipt:pmPrintReceipt,
-    archiveDay:pmArchiveDay,
-    demoLoad:pmDemoLoad,
+    confirmNextPayment:pmConfirmNext,
+    seedConfirmedPayment:pmSeedConfirmedPayment,
+    renderAll:pmRenderAll,
+    setOrders:pmSetOrders,
+    populateOrders:pmPopulateOrders,
+    getConfirmedTotal:pmConfirmedTotal,
+    getPendingTotal:pmPendingTotal,
+    getRemaining:pmRemaining,
     getPayments:function(){return pmPayments;},
     getArchivedPayments:function(){return pmArchivedPayments;},
     getReceipts:function(){return pmReceipts;},
-    getArchivedReceipts:function(){return pmArchivedReceipts;}
+    getArchivedReceipts:function(){return pmArchivedReceipts;},
+    archiveDay:pmArchiveDay
 };
-
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',pmInit);else pmInit();
 })();

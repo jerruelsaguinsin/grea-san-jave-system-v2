@@ -19,6 +19,7 @@
     <a href="customer-dashboard.html" id="dashboardHomeLink" class="active">Dashboard</a>
     <button type="button" id="showCustomerProfileBtn" class="app-nav-btn">My Profile</button>
     <button type="button" id="showCustomerOrdersBtn" class="app-nav-btn sidebar-my-orders">My Orders</button>
+    <button type="button" id="showCustomerFeedbackBtn" class="app-nav-btn">Feedback &amp; Ratings</button>
   </nav>
   <div class="session-info">
     <div class="session-user-actions">
@@ -106,6 +107,11 @@
     <div id="myOrdersList" class="tracking-order-list" aria-live="polite"></div>
   </section>
 
+  <section id="customerFeedbackSection" class="tracking-view" hidden>
+    <h1 class="dashboard-welcome">Feedback &amp; Ratings</h1>
+    <iframe id="customerFeedbackFrame" title="Customer feedback and ratings" style="width:100%;height:calc(100vh - 10rem);min-height:30rem;border:0;background:transparent;"></iframe>
+  </section>
+
   <div id="orderPlacementSection" hidden></div>
 </main>
 
@@ -131,6 +137,7 @@
 <script src="js/emailService.js"></script>
 <script src="js/profilePage.js"></script>
 <script src="js/customerDashboard.js"></script>
+<script src="../../aerica/js/customer_Feedback.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="../../jerr/order-placement-page.js"></script>
 </body>

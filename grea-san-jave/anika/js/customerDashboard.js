@@ -1,5 +1,26 @@
 let mockCustomerOrders = [];
 let currentTrackingTab = "all";
+let customerFeedbackRecords = [];
+let selectedFeedbackOrderId = null;
+
+function loadCustomerFeedbackRecords() {
+  try {
+    let storedFeedback = sessionStorage.getItem("gsj_customer_feedback");
+    let parsedFeedback = storedFeedback === null ? [] : JSON.parse(storedFeedback);
+    return Array.isArray(parsedFeedback) ? parsedFeedback : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+customerFeedbackRecords = loadCustomerFeedbackRecords();
+
+function hasSubmittedFeedback(orderId) {
+  for (let i = 0; i < customerFeedbackRecords.length; i++) {
+    if (String(customerFeedbackRecords[i].orderId) === String(orderId)) return true;
+  }
+  return false;
+}
 
 function loadMockCustomerOrders() {
   try {

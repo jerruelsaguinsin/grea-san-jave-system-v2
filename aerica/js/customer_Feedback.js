@@ -88,6 +88,8 @@ var feedbacks = [
 var activityLogMock = [];
 
 var currentCustomerId = 1; // simulates whoever is logged in
+var selectedFeedbackOrderId = null;
+var dashboardFeedbackContext = false;
 
 // =========================== MANUAL ARRAY HELPERS ===========================
 // No Array.prototype methods used below — everything is a plain for-loop.
@@ -189,7 +191,7 @@ function getCurrentCustomer() {
 }
 
 function hasFeedbackForOrder(orderId) {
-  return linearFind(feedbacks, function (f) { return f.orderId === orderId; }) !== null;
+  return linearFind(feedbacks, function (f) { return String(f.orderId) === String(orderId); }) !== null;
 }
 
 function getDoneOrdersWithoutFeedback(customerId) {
@@ -281,6 +283,13 @@ function handleFeedbackSubmit(orderId) {
 
   delete pendingRatings[orderId];
   renderFeedbackModule();
+  if (dashboardFeedbackContext) {
+    window.parent.postMessage({
+      type: "gsj-customer-feedback-submitted",
+      feedbacks: feedbacks,
+      orderId: orderId
+    }, "*");
+  }
 }
 
 function renderCustomerSwitcher() {
@@ -315,7 +324,7 @@ function renderFeedbackModule() {
       var o = eligible[i];
       var currentRating = pendingRatings[o.orderId] || 0;
 
-      html += '<div class="order-feedback-row" style="display:block;">';
+      html += '<div class="order-feedback-row" id="feedback-order-' + escapeHtml(o.orderId) + '" style="display:block;">';
       html += '  <div class="order-feedback-info">';
       html += '    <div><span class="order-id">Order #' + o.orderId + '</span> — ' + escapeHtml(o.subject) + '</div>';
       html += '    <div style="color:var(--text-muted);font-size:0.78rem;">Completed ' + formatDate(o.dateCompleted) + '</div>';
@@ -363,6 +372,31 @@ function renderFeedbackModule() {
 
   document.getElementById("avgRatingDisplay").textContent =
     history.length > 0 ? averageOf(history, function (f) { return f.rating; }).toFixed(1) + " / 5" : "";
+
+  if (selectedFeedbackOrderId !== null) {
+    var selectedRow = document.getElementById("feedback-order-" + selectedFeedbackOrderId);
+    if (selectedRow) selectedRow.scrollIntoView({ block: "center" });
+  }
+}
+
+function applyDashboardFeedbackContext(context) {
+  if (!context || !context.customer) return;
+  dashboardFeedbackContext = true;
+  customers = [context.customer];
+  orders = Array.isArray(context.orders) ? context.orders : [];
+  feedbacks = Array.isArray(context.feedbacks) ? context.feedbacks : [];
+  currentCustomerId = context.customer.customerId;
+  selectedFeedbackOrderId = context.selectedOrderId === undefined ? null : context.selectedOrderId;
+  pendingRatings = {};
+
+  var switcher = document.getElementById("customerSwitcher");
+  if (switcher) {
+    renderCustomerSwitcher();
+    switcher.disabled = true;
+    var switcherWrap = switcher.closest(".customer-switcher");
+    if (switcherWrap) switcherWrap.hidden = true;
+  }
+  renderFeedbackModule();
 }
 
 function initApp() {
@@ -370,5 +404,10 @@ function initApp() {
   document.getElementById("customerSwitcher").addEventListener("change", handleCustomerSwitch);
   renderFeedbackModule();
 }
+
+window.addEventListener("message", function (event) {
+  if (event.source !== window.parent || !event.data || event.data.type !== "gsj-customer-feedback-context") return;
+  applyDashboardFeedbackContext(event.data);
+});
 
 document.addEventListener("DOMContentLoaded", initApp);
