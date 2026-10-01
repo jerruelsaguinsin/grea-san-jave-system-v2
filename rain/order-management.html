@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Order Management</title>
+<base target="_blank">
+<link rel="stylesheet" href="anika.css">
+<style>
+/* Small order-board additions; shared colors and controls come from anika.css. */
+.shell { max-width: 1180px; margin: auto; padding: 2.25rem 1rem 3.5rem; }
+.page-title { margin: 0; }
+.page-sub { margin: .35rem 0 1.75rem; color: var(--text-muted); }
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+.stat-card, .order-card { padding: 1.1rem 1.25rem; }
+.order-list { display: grid; gap: .8rem; }
+.toolbar-row, .card-head, .card-meta, .card-actions { display: flex; align-items: center; gap: .6rem; }
+.toolbar-row { margin-bottom: .5rem; }
+.search-input { flex: 1; min-width: 180px; }
+.queue-hint { min-height: 1.5rem; margin: 0 0 1rem; color: var(--text-muted); }
+.status-tabs { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+.tab { padding: .45rem .8rem; border: 1px solid var(--border-color); border-radius: 999px; background: #fff; color: var(--text-muted); }
+.tab[aria-selected="true"] { background: var(--primary-color-light); color: var(--primary-color-dark); font-weight: 700; }
+.card-head { justify-content: space-between; }
+.order-disclosure > summary { cursor: pointer; list-style: none; }
+.order-disclosure > summary::-webkit-details-marker { display: none; }
+.order-disclosure > summary::after { content: "+ Details"; display: block; margin-top: .35rem; color: var(--text-muted); font-size: .8rem; }
+.order-disclosure[open] > summary::after { content: "− Hide details"; }
+.card-id { color: var(--primary-color-dark); }
+.card-customer { margin: .6rem 0 .2rem; font-size: 1.05rem; }
+.card-details { margin: 0; color: var(--text-muted); }
+.card-meta { flex-wrap: wrap; margin-top: 1rem; padding-top: .8rem; border-top: 1px solid var(--border-color); }
+.field { min-width: 145px; flex: 1; }
+.field-label { display: block; color: var(--text-muted); font-size: .75rem; }
+.field-value { font-weight: 600; }
+.card-actions { justify-content: flex-end; margin-top: 1rem; }
+.order-card.is-next-up { border-color: var(--primary-color); }
+.empty-state { padding: 2.5rem 1rem; text-align: center; color: var(--text-muted); }
+.empty-title { margin: 0; color: var(--text-color); }
+.empty-text { margin: .25rem 0 0; }
+.modal-overlay[hidden] { display: none; }
+.modal-box { width: min(760px, 100%); max-height: 90vh; overflow: auto; }
+.modal-head, .modal-body { padding: 1.25rem; }
+.modal-head { border-bottom: 1px solid var(--border-color); }
+.modal-head h3 { margin: 0; }
+.icon-btn { border: 0; background: transparent; color: var(--text-muted); font-size: 1.5rem; }
+.form-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+.field-error { min-height: 1.4rem; color: var(--error-color); }
+.modal-actions { display: flex; justify-content: flex-end; gap: .6rem; margin-top: 1.25rem; }
+@media (max-width: 700px) {
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .toolbar-row { flex-wrap: wrap; }
+    .search-input { flex-basis: 100%; }
+    .form-row { grid-template-columns: 1fr; }
+    .card-meta { display: grid; grid-template-columns: 1fr 1fr; }
+    .card-actions { justify-content: stretch; }
+    .card-actions .btn { flex: 1; }
+}
+</style>
+</head>
+<body>
+<main class="shell">
+    <header>
+        <h1 class="page-title">Order Management</h1>
+        <p class="page-sub">A clear overview of today’s orders, queue, and stock.</p>
+    </header>
+
+    <section class="stat-grid" aria-label="Owner dashboard">
+        <div class="stat-card"><p class="stat-label">Orders today</p><p class="stat-value" id="stat-today">0</p></div>
+        <div class="stat-card"><p class="stat-label">Waiting orders</p><p class="stat-value" id="stat-queue">0</p></div>
+        <div class="stat-card"><p class="stat-label">Low stock</p><p class="stat-value" id="stat-lowstock">0</p></div>
+        <div class="stat-card"><p class="stat-label">Unclaimed</p><p class="stat-value" id="stat-unclaimed">0</p></div>
+    </section>
+
+    <section aria-label="Order controls">
+        <div class="toolbar-row">
+            <input type="search" id="search-input" class="input search-input" placeholder="Search orders..." autocomplete="off">
+            <button type="button" class="btn btn-secondary" id="next-btn">No waiting orders</button>
+            <button type="button" class="btn btn-danger" id="reset-btn">Clear data</button>
+        </div>
+        <p class="queue-hint" id="queue-hint"></p>
+    </section>
+
+    <nav class="status-tabs" id="status-tabs" aria-label="Filter orders by status">
+        <button type="button" class="tab" data-filter="all" aria-selected="true">All <span class="tab-count">0</span></button>
+        <button type="button" class="tab" data-filter="queued" aria-selected="false">Queued <span class="tab-count">0</span></button>
+        <button type="button" class="tab" data-filter="done" aria-selected="false">Done <span class="tab-count">0</span></button>
+        <button type="button" class="tab" data-filter="unclaimed" aria-selected="false">Unclaimed <span class="tab-count">0</span></button>
+        <button type="button" class="tab" data-filter="cancelled" aria-selected="false">Cancelled <span class="tab-count">0</span></button>
+    </nav>
+
+    <section class="order-list" id="order-table-body" aria-label="Orders"></section>
+</main>
+
+<div class="modal-overlay" id="order-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+    <div class="modal-box">
+        <div class="modal-head" style="display:flex; align-items:center; justify-content:space-between;">
+            <h3 id="modal-title">New order</h3>
+            <button type="button" class="icon-btn" id="modal-close" aria-label="Close">&#215;</button>
+        </div>
+        <div class="modal-body">
+            <fieldset>
+                <legend>Order details</legend>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="customerName">Customer name</label>
+                    <input type="text" id="customerName" class="input" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="subject">Subject (optional)</label>
+                    <input type="text" id="subject" class="input" placeholder="e.g. Thesis printing" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="serviceType">Service</label>
+                    <select id="serviceType" class="input"></select>
+                </div>
+                <div class="form-group">
+                    <label for="serviceOption">Option</label>
+                    <select id="serviceOption" class="input"></select>
+                </div>
+                <div class="form-group">
+                    <label for="paperSize">Paper size</label>
+                    <select id="paperSize" class="input">
+                        <option value="Letter">Letter</option>
+                        <option value="Legal">Legal</option>
+                        <option value="A4">A4</option>
+                        <option value="Others">Others</option>
+                    </select>
+                    <input type="text" id="paperSizeOther" class="input" placeholder="Specify paper type / size" autocomplete="off" hidden>
+                </div>
+                <div class="form-group">
+                    <label for="colorTier">Color tier</label>
+                    <select id="colorTier" class="input"></select>
+                </div>
+                <div class="form-group">
+                    <label for="fileChannel">Received through</label>
+                    <select id="fileChannel" class="input"></select>
+                </div>
+                <div class="form-group">
+                    <label for="pages">Pages</label>
+                    <input type="number" id="pages" class="input" min="1" step="1" value="1">
+                </div>
+                <div class="form-group">
+                    <label for="copies">Copies</label>
+                    <input type="number" id="copies" class="input" min="1" step="1" value="1">
+                </div>
+                <div class="form-group">
+                    <label for="notes">Notes (optional)</label>
+                    <input type="text" id="notes" class="input" placeholder="Binding instructions, special requests" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" id="isRush"> Rush order</label>
+                </div>
+            </div>
+            </fieldset>
+            <p>Price per page: <span id="rate-preview">₱0</span></p>
+            <p><strong>Total price: <span id="total-preview">₱0</span></strong></p>
+            <p class="field-error" id="order-error" role="alert"></p>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancel-btn">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-btn">Add order</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ==========================================================================
+   HAND-CODED HELPERS - plain loops and index assignment only.
+   No array methods, no string-method shortcuts, no Math, no JSON, no Number.is*.
+   (Renamed per SCHEMA_AND_MODULE_MAP.md naming rules: camelCase functions and
+   variables, UPPER_SNAKE_CASE constants, descriptive names, no abbreviations.)
+   ========================================================================== */
+//  The value for 'not a number' (0 divided by 0 gives NaN)
+var NOT_A_NUMBER = 0 / 0;
+//  All capital letters, used to change letter case
+var UPPERCASE_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+//  All small letters, used to change letter case
+var LOWERCASE_LETTERS = "abcdefghijklmnopqrstuvwxyz";
+//  Short month names, used when showing dates
+var MONTH_ABBREVIATIONS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+//  Checks if one character is a space, tab, or new line
+function isSpaceCharacter(characterText) {
+    return characterText === " " || characterText === "\t" || characterText === "\n" ||
+        characterText === "\r" || characterText === "\f" || characterText === "\v";
+}
+
+//  Copies the letters from the start position up to (not including) the end position
+function copySubstring(sourceText, startIndex, endIndex) {
+    var resultText = "";
+    var charIndex;
+    for (charIndex = startIndex; charIndex < endIndex && charIndex < sourceText.length; charIndex = charIndex + 1) {
+        resultText = resultText + sourceText[charIndex];
+    }
+    return resultText;
+}
+
+//  Removes spaces from the start and end of a text
+function trimWhitespace(rawValue) {
+    var sourceText = String(rawValue);
+    var startIndex = 0;
+    var endIndex = sourceText.length;
+    while (startIndex < endIndex && isSpaceCharacter(sourceText[startIndex])) { startIndex = startIndex + 1; }
+    while (endIndex > startIndex && isSpaceCharacter(sourceText[endIndex - 1])) { endIndex = endIndex - 1; }
+    return copySubstring(sourceText, startIndex, endIndex);
+}
+
+//  Changes letters using two lists (from-letters and to-letters), one letter at a time
+function convertLetterCase(rawValue, fromLetters, toLetters) {
+    var sourceText = String(rawValue);
+    var resultText = "";
+    var textIndex;
+    var letterIndex;
+    var wasConverted;
+    for (textIndex = 0; textIndex < sourceText.length; textIndex = textIndex + 1) {
+        wasConverted = false;
+        for (letterIndex = 0; letterIndex < 26; letterIndex = letterIndex + 1) {
+            if (sourceText[textIndex] === fromLetters[letterIndex]) {
+                resultText = resultText + toLetters[letterIndex];
+                wasConverted = true;
+                break;
+            }
+        }
+        if (!wasConverted) { resultText = resultText + sourceText[textIndex]; }
+    }
+    return resultText;
+}
+//  Changes all capital letters to small letters
+function toLowerCaseText(rawValue) { return convertLetterCase(rawValue, UPPERCASE_LETTERS, LOWERCASE_LETTERS); }
+//  Changes all small letters to capital letters
+function toUpperCaseText(rawValue) { return convertLetterCase(rawValue, LOWERCASE_LETTERS, UPPERCASE_LETTERS); }
+
+//  Checks if a text contains another text (returns true or false)
+function textIncludes(sourceValue, targetValue) {
+    var sourceText = String(sourceValue);
+    var targetText = String(targetValue);
+    var startIndex;
+    var offsetIndex;
+    var isMatch;
+    if (targetText === "") { return true; }
+    for (startIndex = 0; startIndex + targetText.length <= sourceText.length; startIndex = startIndex + 1) {
+        isMatch = true;
+        for (offsetIndex = 0; offsetIndex < targetText.length; offsetIndex = offsetIndex + 1) {
+            if (sourceText[startIndex + offsetIndex] !== targetText[offsetIndex]) { isMatch = false; break; }
+        }
+        if (isMatch) { return true; }
+    }
+    return false;
+}
+
+/* ---- type checks and math ---- */
+//  Checks if a value is an array (has a length number)
+function isArrayLike(value) { return value !== null && typeof value === "object" && typeof value.length === "number"; }
+//  Checks if a value is a real number (not NaN and not Infinity)
+function isFiniteNumber(numberValue) {
+    return typeof numberValue === "number" && numberValue === numberValue &&
+        numberValue !== 1 / 0 && numberValue !== -1 / 0;
+}
+//  Checks if a number has no decimal part
+function isWholeNumber(numberValue) { return isFiniteNumber(numberValue) && numberValue % 1 === 0; }
+//  Rounds a number down (3.9 becomes 3, -3.1 becomes -4)
+function floorNumber(numberValue) {
+    var truncatedValue = numberValue - (numberValue % 1);
+    if (numberValue < 0 && truncatedValue !== numberValue) { truncatedValue = truncatedValue - 1; }
+    return truncatedValue;
+}
+//  Rounds a number to the nearest whole number
+function roundNumber(numberValue) { return floorNumber(numberValue + 0.5); }
+//  Returns the bigger of two numbers
+function maxNumber(firstNumber, secondNumber) { return firstNumber > secondNumber ? firstNumber : secondNumber; }
+
+/* ---- class tokens ---- */
+//  Checks if an element already has a CSS class name
+function hasClassToken(element, targetClass) {
+    var classText = element.className;
+    var tokenText = "";
+    var charIndex;
+    for (charIndex = 0; charIndex <= classText.length; charIndex = charIndex + 1) {
+        if (charIndex === classText.length || isSpaceCharacter(classText[charIndex])) {
+            if (tokenText === targetClass) { return true; }
+            tokenText = "";
+        } else { tokenText = tokenText + classText[charIndex]; }
+    }
+    return false;
+}
+//  Adds a CSS class name to an element (only if it is not there yet)
+function addClassToken(element, newClass) {
+    if (hasClassToken(element, newClass)) { return; }
+    if (element.className !== "") { element.className = element.className + " "; }
+    element.className = element.className + newClass;
+}
+//  Removes a CSS class name from an element
+function removeClassToken(element, targetClass) {
+    var classText = element.className;
+    var resultText = "";
+    var tokenText = "";
+    var charIndex;
+    for (charIndex = 0; charIndex <= classText.length; charIndex = charIndex + 1) {
+        if (charIndex === classText.length || isSpaceCharacter(classText[charIndex])) {
+            if (tokenText !== "" && tokenText !== targetClass) {
+                if (resultText !== "") { resultText = resultText + " "; }
+                resultText = resultText + tokenText;
+            }
+            tokenText = "";
+        } else { tokenText = tokenText + classText[charIndex]; }
+    }
+    element.className = resultText;
+}
+//  Checks if the chosen option in a dropdown is disabled
+function isSelectedOptionDisabled(selectElement) {
+    return selectElement.selectedIndex >= 0 && selectElement.options[selectElement.selectedIndex].disabled;
+}
+
+/* ---- JSON (hand-written writer and reader) ---- */
+//  Puts quotes around a text and escapes special characters, so it is safe for JSON
+function quoteJsonString(sourceText) {
+    var quotedText = "\"";
+    var charIndex;
+    var currentChar;
+    for (charIndex = 0; charIndex < sourceText.length; charIndex = charIndex + 1) {
+        currentChar = sourceText[charIndex];
+        if (currentChar === "\"") { quotedText = quotedText + "\\\""; }
+        else if (currentChar === "\\") { quotedText = quotedText + "\\\\"; }
+        else if (currentChar === "\n") { quotedText = quotedText + "\\n"; }
+        else if (currentChar === "\r") { quotedText = quotedText + "\\r"; }
+        else if (currentChar === "\t") { quotedText = quotedText + "\\t"; }
+        else { quotedText = quotedText + currentChar; }
+    }
+    return quotedText + "\"";
+}
+//  Turns a value (text, number, array, or object) into JSON text
+function stringifyJson(value) {
+    var valueType = typeof value;
+    var jsonText;
+    var itemIndex;
+    var keyName;
+    var isFirstKey;
+    if (value === null || value === undefined || valueType === "function") { return "null"; }
+    if (valueType === "number") { return isFiniteNumber(value) ? String(value) : "null"; }
+    if (valueType === "boolean") { return value ? "true" : "false"; }
+    if (valueType === "string") { return quoteJsonString(value); }
+    if (isArrayLike(value)) {
+        jsonText = "[";
+        for (itemIndex = 0; itemIndex < value.length; itemIndex = itemIndex + 1) {
+            if (itemIndex > 0) { jsonText = jsonText + ","; }
+            jsonText = jsonText + stringifyJson(value[itemIndex]);
+        }
+        return jsonText + "]";
+    }
+    jsonText = "{";
+    isFirstKey = true;
+    for (keyName in value) {
+        if (value[keyName] === undefined || typeof value[keyName] === "function") { continue; }
+        if (!isFirstKey) { jsonText = jsonText + ","; }
+        isFirstKey = false;
+        jsonText = jsonText + quoteJsonString(keyName) + ":" + stringifyJson(value[keyName]);
+    }
+    return jsonText + "}";
+}
+
+// parserState = { sourceText: the JSON text, position: index of the next character to read }
+//  Moves the reading position forward past any spaces
+function skipJsonWhitespace(parserState) {
+    while (parserState.position < parserState.sourceText.length &&
+           isSpaceCharacter(parserState.sourceText[parserState.position])) {
+        parserState.position = parserState.position + 1;
+    }
+}
+//  Reads true, false, or null from the JSON text and returns its value
+function parseJsonKeyword(parserState, keywordText, keywordValue) {
+    var charIndex;
+    for (charIndex = 0; charIndex < keywordText.length; charIndex = charIndex + 1) {
+        if (parserState.sourceText[parserState.position + charIndex] !== keywordText[charIndex]) { throw "bad json"; }
+    }
+    parserState.position = parserState.position + keywordText.length;
+    return keywordValue;
+}
+//  Reads one quoted text from the JSON text and returns it
+function parseJsonString(parserState) {
+    var parsedText = "";
+    var currentChar;
+    var escapedChar;
+    if (parserState.sourceText[parserState.position] !== "\"") { throw "bad json"; }
+    parserState.position = parserState.position + 1;
+    while (parserState.position < parserState.sourceText.length &&
+           parserState.sourceText[parserState.position] !== "\"") {
+        currentChar = parserState.sourceText[parserState.position];
+        if (currentChar === "\\") {
+            parserState.position = parserState.position + 1;
+            escapedChar = parserState.sourceText[parserState.position];
+            if (escapedChar === "n") { parsedText = parsedText + "\n"; }
+            else if (escapedChar === "r") { parsedText = parsedText + "\r"; }
+            else if (escapedChar === "t") { parsedText = parsedText + "\t"; }
+            else if (escapedChar === "\"" || escapedChar === "\\" || escapedChar === "/") { parsedText = parsedText + escapedChar; }
+            else { throw "bad json"; }
+        } else { parsedText = parsedText + currentChar; }
+        parserState.position = parserState.position + 1;
+    }
+    parserState.position = parserState.position + 1;
+    return parsedText;
+}
+//  Reads any JSON value (object, array, text, keyword, or number) from the current position
+function parseJsonValue(parserState) {
+    var firstChar;
+    var parsedObject;
+    var parsedArray;
+    var keyName;
+    var itemCount;
+    var numberText;
+    skipJsonWhitespace(parserState);
+    firstChar = parserState.sourceText[parserState.position];
+    if (firstChar === "{") {
+        parsedObject = {};
+        parserState.position = parserState.position + 1;
+        skipJsonWhitespace(parserState);
+        if (parserState.sourceText[parserState.position] === "}") { parserState.position = parserState.position + 1; return parsedObject; }
+        while (true) {
+            skipJsonWhitespace(parserState);
+            keyName = parseJsonString(parserState);
+            skipJsonWhitespace(parserState);
+            if (parserState.sourceText[parserState.position] !== ":") { throw "bad json"; }
+            parserState.position = parserState.position + 1;
+            parsedObject[keyName] = parseJsonValue(parserState);
+            skipJsonWhitespace(parserState);
+            if (parserState.sourceText[parserState.position] === ",") { parserState.position = parserState.position + 1; }
+            else if (parserState.sourceText[parserState.position] === "}") { parserState.position = parserState.position + 1; return parsedObject; }
+            else { throw "bad json"; }
+        }
+    }
+    if (firstChar === "[") {
+        parsedArray = [];
+        itemCount = 0;
+        parserState.position = parserState.position + 1;
+        skipJsonWhitespace(parserState);
+        if (parserState.sourceText[parserState.position] === "]") { parserState.position = parserState.position + 1; return parsedArray; }
+        while (true) {
+            parsedArray[itemCount] = parseJsonValue(parserState);
+            itemCount = itemCount + 1;
+            skipJsonWhitespace(parserState);
+            if (parserState.sourceText[parserState.position] === ",") { parserState.position = parserState.position + 1; }
+            else if (parserState.sourceText[parserState.position] === "]") { parserState.position = parserState.position + 1; return parsedArray; }
+            else { throw "bad json"; }
+        }
+    }
+    if (firstChar === "\"") { return parseJsonString(parserState); }
+    if (firstChar === "t") { return parseJsonKeyword(parserState, "true", true); }
+    if (firstChar === "f") { return parseJsonKeyword(parserState, "false", false); }
+    if (firstChar === "n") { return parseJsonKeyword(parserState, "null", null); }
+    numberText = "";
+    while (parserState.position < parserState.sourceText.length &&
+           (parserState.sourceText[parserState.position] === "-" || parserState.sourceText[parserState.position] === "+" ||
+            parserState.sourceText[parserState.position] === "." || parserState.sourceText[parserState.position] === "e" ||
+            parserState.sourceText[parserState.position] === "E" ||
+            (parserState.sourceText[parserState.position] >= "0" && parserState.sourceText[parserState.position] <= "9"))) {
+        numberText = numberText + parserState.sourceText[parserState.position];
+        parserState.position = parserState.position + 1;
+    }
+    if (numberText === "") { throw "bad json"; }
+    return Number(numberText);
+}
+//  Turns JSON text back into a value. Throws an error if the text is not valid JSON
+function parseJson(jsonText) {
+    var parserState = { sourceText: String(jsonText), position: 0 };
+    var parsedValue = parseJsonValue(parserState);
+    skipJsonWhitespace(parserState);
+    if (parserState.position < parserState.sourceText.length) { throw "bad json"; }
+    return parsedValue;
+}
+
+/* ---- dates and money ---- */
+//  Adds a zero in front of a number that has one digit (5 becomes 05)
+function padTwoDigits(numberValue) { return numberValue < 10 ? "0" + numberValue : String(numberValue); }
+//  Turns a time in milliseconds into an ISO date text (uses today if no value is given)
+function millisecondsToIsoString(millisecondsValue) {
+    var dateObject;
+    var millisecondsPart;
+    if (millisecondsValue === undefined) { millisecondsValue = new Date().getTime(); }
+    dateObject = new Date(millisecondsValue);
+    millisecondsPart = dateObject.getUTCMilliseconds();
+    return dateObject.getUTCFullYear() + "-" + padTwoDigits(dateObject.getUTCMonth() + 1) + "-" +
+        padTwoDigits(dateObject.getUTCDate()) + "T" + padTwoDigits(dateObject.getUTCHours()) + ":" +
+        padTwoDigits(dateObject.getUTCMinutes()) + ":" + padTwoDigits(dateObject.getUTCSeconds()) + "." +
+        (millisecondsPart < 10 ? "00" + millisecondsPart : (millisecondsPart < 100 ? "0" + millisecondsPart : String(millisecondsPart))) + "Z";
+}
+//  Turns an ISO date text back into milliseconds. Returns NaN if the text is too short
+function isoStringToMilliseconds(isoText) {
+    var yearNumber;
+    var monthNumber;
+    var dayNumber;
+    var adjustedYear;
+    var eraNumber;
+    var yearOfEra;
+    var dayOfYear;
+    var dayOfEra;
+    var millisecondsPart = 0;
+    if (typeof isoText !== "string" || isoText.length < 19) { return NOT_A_NUMBER; }
+    yearNumber = Number(copySubstring(isoText, 0, 4));
+    monthNumber = Number(copySubstring(isoText, 5, 7));
+    dayNumber = Number(copySubstring(isoText, 8, 10));
+    if (isoText.length >= 23 && isoText[19] === ".") { millisecondsPart = Number(copySubstring(isoText, 20, 23)); }
+    adjustedYear = monthNumber <= 2 ? yearNumber - 1 : yearNumber;
+    eraNumber = floorNumber(adjustedYear / 400);
+    yearOfEra = adjustedYear - eraNumber * 400;
+    dayOfYear = floorNumber((153 * (monthNumber > 2 ? monthNumber - 3 : monthNumber + 9) + 2) / 5) + dayNumber - 1;
+    dayOfEra = yearOfEra * 365 + floorNumber(yearOfEra / 4) - floorNumber(yearOfEra / 100) + dayOfYear;
+    return (eraNumber * 146097 + dayOfEra - 719468) * 86400000 +
+        Number(copySubstring(isoText, 11, 13)) * 3600000 + Number(copySubstring(isoText, 14, 16)) * 60000 +
+        Number(copySubstring(isoText, 17, 19)) * 1000 + millisecondsPart;
+}
+//  Shows an ISO date as a friendly text, like Oct 1, 3:05 PM
+function formatTimestamp(isoText) {
+    var dateObject = new Date(isoStringToMilliseconds(isoText));
+    var hourNumber = dateObject.getHours();
+    var meridiemText = hourNumber >= 12 ? "PM" : "AM";
+    hourNumber = hourNumber % 12;
+    if (hourNumber === 0) { hourNumber = 12; }
+    return MONTH_ABBREVIATIONS[dateObject.getMonth()] + " " + dateObject.getDate() + ", " + hourNumber + ":" +
+        padTwoDigits(dateObject.getMinutes()) + " " + meridiemText;
+}
+//  Shows a number as pesos with commas, like ₱1,250.50
+function formatPeso(amountNumber) {
+    var isNegative = amountNumber < 0;
+    var totalCents;
+    var wholePesos;
+    var centsPart;
+    var digitsText;
+    var groupedText = "";
+    var digitIndex;
+    if (isNegative) { amountNumber = -amountNumber; }
+    totalCents = roundNumber(amountNumber * 100);
+    wholePesos = floorNumber(totalCents / 100);
+    centsPart = totalCents - wholePesos * 100;
+    digitsText = String(wholePesos);
+    for (digitIndex = 0; digitIndex < digitsText.length; digitIndex = digitIndex + 1) {
+        if (digitIndex > 0 && (digitsText.length - digitIndex) % 3 === 0) { groupedText = groupedText + ","; }
+        groupedText = groupedText + digitsText[digitIndex];
+    }
+    if (centsPart > 0) { groupedText = groupedText + "." + (centsPart % 10 === 0 ? String(centsPart / 10) : padTwoDigits(centsPart)); }
+    return (isNegative ? "-" : "") + "\u20B1" + groupedText;
+}
+
+
+//  Checks if a list contains a value (simple loop, no built-in search)
+function arrayContainsValue(sourceArray, targetValue) {
+    var index;
+    for (index = 0; index < sourceArray.length; index = index + 1) {
+        if (sourceArray[index] === targetValue) { return true; }
+    }
+    return false;
+}
+
+
+/* ==========================================================================
+   1. SHARED CONSTANTS (copied from constants.js, never retyped)
+   ========================================================================== */
+var SERVICE_TYPES = {
+    DOCUMENT_PRINTING: "Document Printing",
+    BOOKBINDING: "Bookbinding"
+};
+var SERVICE_OPTIONS = {
+    SPIRAL_BINDING: "Spiral Binding",
+    PERFECT_BINDING: "Perfect Binding",
+    LAMINATION: "Lamination",
+    NONE: "None"
+};
+var PROMO_TYPES = {
+    NONE: "None",
+    BULK_DISCOUNT: "Bulk Discount",
+    REGULAR_CUSTOMER_DISCOUNT: "Regular Customer Discount",
+    SEASONAL_PROMO: "Seasonal Promo"
+};
+var COLOR_TIERS = {
+    BLACK_TEXT: "Black Text",
+    MINIMAL_COLOR: "Minimal Color",
+    SMALL_IMAGE: "Small Image",
+    FULL_COLOR: "Full Color"
+};
+var PRICE_PER_PAGE = {};
+PRICE_PER_PAGE[COLOR_TIERS.BLACK_TEXT] = 3;
+PRICE_PER_PAGE[COLOR_TIERS.MINIMAL_COLOR] = 5;
+PRICE_PER_PAGE[COLOR_TIERS.SMALL_IMAGE] = 10;
+PRICE_PER_PAGE[COLOR_TIERS.FULL_COLOR] = 20;
+
+var ORDER_CHANNELS = { CUSTOMER_PORTAL: "Customer Portal", MESSENGER: "Messenger", EMAIL: "Email", IN_PERSON: "In Person", BLUETOOTH: "Bluetooth" };
+var ORDER_STATUS = { QUEUED: "queued", PRINTING: "printing", DONE: "done", UNCLAIMED: "unclaimed", CANCELLED: "cancelled" };
+var QUEUE_TYPES = { ADVANCE: "advance", WALK_IN: "walkIn" };
+var PAYMENT_STATUS = { PENDING: "pending", DOWN_PAYMENT_PAID: "downPaymentPaid", FULLY_PAID: "fullyPaid" };
+var INVENTORY_CATEGORIES = {
+    BOND_PAPER: "Bond Paper",
+    PHOTO_PAPER: "Photo Paper",
+    SPECIALTY_PAPER: "Specialty Paper",
+    INK_TONER: "Ink/Toner",
+    BINDING_MATERIALS: "Binding Materials",
+    LAMINATION_MATERIALS: "Lamination Materials"
+};
+
+// The md names NEW_ORDER, RUSH_ORDER and ORDER_READY as Module 5 triggers,
+// but constants.js only has the first two entries. Add the rest there first.
+var NOTIFICATION_TYPES = {
+    UNCLAIMED_ORDER: "UnclaimedOrder",
+    LOW_STOCK: "LowStock",
+    NEW_ORDER: "NewOrder",
+    RUSH_ORDER: "RushOrder",
+    ORDER_READY: "OrderReady"
+};
+var UNCLAIMED_THRESHOLD_DAYS = 3;
+
+/* ---- constants used only by the modules (see SCHEMA_ADDITIONS.md) ---- */
+var RECIPIENT_TYPES = { STAFF: "Staff", CUSTOMER: "Customer", BOTH: "Both" };
+var STOCK_UNITS = { REAM: "ream", REAMS: "reams", PIECES: "pcs" };
+var MATERIAL_OTHER_OPTION = "Others";
+var VALIDATION_RESULTS = { VALID: "Valid", MISSING: "Missing", CORRUPTED: "Corrupted" };
+
+var PIECES_PER_REAM = 500;
+var DEFAULT_REORDER_LEVEL = 5;
+var MILLISECONDS_PER_DAY = 86400000;
+var LANE_CAPACITY = 100;
+
+var OPTIONS_FOR_SERVICE = {};
+OPTIONS_FOR_SERVICE[SERVICE_TYPES.DOCUMENT_PRINTING] = [SERVICE_OPTIONS.NONE, SERVICE_OPTIONS.LAMINATION];
+OPTIONS_FOR_SERVICE[SERVICE_TYPES.BOOKBINDING] = [SERVICE_OPTIONS.SPIRAL_BINDING, SERVICE_OPTIONS.PERFECT_BINDING];
+
+var ORDERS_SNAPSHOT_KEY = "gsj_orders_snapshot";
+var ORDER_ID_HANDOFF_KEY = "gsj_order_id_handoff";
+var APP_STATE_KEY = "gsj_order_management_state";
+var INVENTORY_SNAPSHOT_KEY = "gsj_inventory_snapshot";
+var CUSTOMER_ORDERS_KEYS = ["gsj_customer_orders", "gsj_order_submissions", "customer_orders"];
+
+
+/* ==========================================================================
+   2. DATA STRUCTURES (hand-built)
+   ========================================================================== */
+function createLinkedList() { return { head: null, size: 0 }; }
+
+function linkedListInsertAtHead(listRef, itemValue) {
+    listRef.head = { value: itemValue, next: listRef.head };
+    listRef.size = listRef.size + 1;
+}
+
+function linkedListFindOrder(listRef, targetOrderId) {
+    var currentNode = listRef.head;
+    while (currentNode !== null) {
+        if (currentNode.value.orderId === targetOrderId) { return currentNode.value; }
+        currentNode = currentNode.next;
+    }
+    return null;
+}
+
+function createCircularQueue(capacityNumber) {
+    var slotsData = [];
+    var slotIndex;
+    for (slotIndex = 0; slotIndex < capacityNumber; slotIndex = slotIndex + 1) { slotsData[slotIndex] = null; }
+    return { slots: slotsData, capacity: capacityNumber, front: 0, rear: -1, count: 0 };
+}
+function queueIsEmpty(queueRef) { return queueRef.count === 0; }
+function queueIsFull(queueRef) { return queueRef.count === queueRef.capacity; }
+function queueEnqueue(queueRef, itemValue) {
+    if (queueIsFull(queueRef)) { return false; }
+    queueRef.rear = (queueRef.rear + 1) % queueRef.capacity;
+    queueRef.slots[queueRef.rear] = itemValue;
+    queueRef.count = queueRef.count + 1;
+    return true;
+}
+function queueDequeue(queueRef) {
+    if (queueIsEmpty(queueRef)) { return null; }
+    var frontItem = queueRef.slots[queueRef.front];
+    queueRef.slots[queueRef.front] = null;
+    queueRef.front = (queueRef.front + 1) % queueRef.capacity;
+    queueRef.count = queueRef.count - 1;
+    return frontItem;
+}
+function queuePeek(queueRef) { return queueIsEmpty(queueRef) ? null : queueRef.slots[queueRef.front]; }
+function queueItemAt(queueRef, offsetNumber) { return queueRef.slots[(queueRef.front + offsetNumber) % queueRef.capacity]; }
+function queueRemoveItem(queueRef, targetItem) {
+    var originalCount = queueRef.count;
+    var passIndex;
+    for (passIndex = 0; passIndex < originalCount; passIndex = passIndex + 1) {
+        var movedItem = queueDequeue(queueRef);
+        if (movedItem !== targetItem) { queueEnqueue(queueRef, movedItem); }
+    }
+}
+function queuePositionOf(queueRef, targetItem) {
+    var positionIndex;
+    for (positionIndex = 0; positionIndex < queueRef.count; positionIndex = positionIndex + 1) {
+        if (queueItemAt(queueRef, positionIndex) === targetItem) { return positionIndex + 1; }
+    }
+    return 0;
+}
+
+function createStack() { return { stackData: [], stackCount: 0 }; }
+function stackPush(stackRef, itemValue) {
+    stackRef.stackData[stackRef.stackCount] = itemValue;
+    stackRef.stackCount = stackRef.stackCount + 1;
+}
+function stackGetFromTop(stackRef, offsetFromTop) { return stackRef.stackData[stackRef.stackCount - 1 - offsetFromTop]; }
+
+
+/* ==========================================================================
+   3. STATE
+   ========================================================================== */
+var ordersList = createLinkedList();
+var orderQueue = createCircularQueue(LANE_CAPACITY);
+var notificationsStack = createStack();
+
+var nextOrderId = 1;
+var nextNotificationId = 1;
+var dayOffset = 0;
+var lastFocusedElement = null;
+var activeStatusFilter = "all";
+
+
+/* ==========================================================================
+   3b. SHARED STORE (window.GSJ_STORE)
+   ========================================================================== */
+var sharedStore = {
+    findOrderById: function (orderIdNumber) { return linkedListFindOrder(ordersList, orderIdNumber); },
+
+    walkOrders: function (visitFunction) {
+        var currentNode = ordersList.head;
+        while (currentNode !== null) { visitFunction(currentNode.value); currentNode = currentNode.next; }
+    },
+
+    formatOrderId: formatOrderId,
+    nowIso: getShopIsoDate,
+
+    orderDoneHandlers: createLinkedList(),
+
+    registerOrderDoneHandler: function (handlerFunction) {
+        linkedListInsertAtHead(sharedStore.orderDoneHandlers, handlerFunction);
+    },
+
+    emitOrderDone: function (finishedOrder) {
+        var currentNode = sharedStore.orderDoneHandlers.head;
+        while (currentNode !== null) { currentNode.value(finishedOrder); currentNode = currentNode.next; }
+    },
+
+    fileBridge: null,
+
+    registerFileBridge: function (bridgeObject) {
+        sharedStore.fileBridge = bridgeObject;
+        applySnapshotFileFields();
+        renderAll();
+    },
+
+    applyFileSummary: function (orderIdNumber, fileSummary) {
+        var liveOrder = linkedListFindOrder(ordersList, orderIdNumber);
+        if (liveOrder === null || !fileSummary) { return; }
+        liveOrder.fileName = fileSummary.fileName === undefined ? liveOrder.fileName : fileSummary.fileName;
+        liveOrder.fileCount = isFiniteNumber(fileSummary.fileCount) ? fileSummary.fileCount : liveOrder.fileCount;
+        liveOrder.fileChannel = fileSummary.fileChannel === undefined ? liveOrder.fileChannel : fileSummary.fileChannel;
+        liveOrder.fileDisposed = !!fileSummary.fileDisposed;
+        liveOrder.dateDisposed = fileSummary.dateDisposed === undefined ? liveOrder.dateDisposed : fileSummary.dateDisposed;
+        saveSnapshot();
+        renderAll();
+    },
+
+    requestRender: function () { renderAll(); }
+};
+window.GSJ_STORE = sharedStore;
+
+
+/* ==========================================================================
+   4. ELEMENT REFERENCES
+   ========================================================================== */
+var orderModal          = document.getElementById("order-modal");
+var orderTableBody      = document.getElementById("order-table-body");
+var searchInput         = document.getElementById("search-input");
+var nextButton          = document.getElementById("next-btn");
+var queueHint           = document.getElementById("queue-hint");
+var statusTabsElement   = document.getElementById("status-tabs");
+
+var customerNameInput   = document.getElementById("customerName");
+var subjectInput        = document.getElementById("subject");
+var serviceTypeInput    = document.getElementById("serviceType");
+var serviceOptionInput  = document.getElementById("serviceOption");
+var paperSizeInput      = document.getElementById("paperSize");
+var paperSizeOtherInput = document.getElementById("paperSizeOther");
+var colorTierInput      = document.getElementById("colorTier");
+var fileChannelInput    = document.getElementById("fileChannel");
+var pagesInput          = document.getElementById("pages");
+var copiesInput         = document.getElementById("copies");
+var isRushInput         = document.getElementById("isRush");
+var notesInput          = document.getElementById("notes");
+var ratePreview         = document.getElementById("rate-preview");
+var totalPreview        = document.getElementById("total-preview");
+var orderError          = document.getElementById("order-error");
+
+
+/* ==========================================================================
+   5. TEXT, NUMBER & TIME HELPERS
+   ========================================================================== */
+function padLeft(rawValue, targetWidth) {
+    var textValue = String(rawValue);
+    while (textValue.length < targetWidth) { textValue = "0" + textValue; }
+    return textValue;
+}
+function formatOrderId(orderIdNumber) { return "ORD-" + padLeft(orderIdNumber, 4); }
+function getShopNowMs() { return new Date().getTime() + dayOffset * MILLISECONDS_PER_DAY; }
+function getShopIsoDate() { return millisecondsToIsoString(getShopNowMs()); }
+
+function populateSelect(selectElement, valuesObject) {
+    var keyName;
+    for (keyName in valuesObject) {
+        var optionElement = document.createElement("option");
+        optionElement.value = valuesObject[keyName];
+        optionElement.textContent = valuesObject[keyName];
+        selectElement.appendChild(optionElement);
+    }
+}
+
+
+/* ==========================================================================
+   6. PRICING & VALIDATION
+   ========================================================================== */
+function calculateBasePrice(colorTierText, pageCount, copyCount) {
+    return PRICE_PER_PAGE[colorTierText] * pageCount * copyCount;
+}
+
+// MODULE 10 HOOK — returns a Promotion.promoId (null means no promo) and the discount amount
+function applyPromo(baseTotalPrice) {
+    return { promoId: null, discountAmount: 0 };
+}
+
+function validateOrder(orderDraft) {
+    if (!orderDraft.customerName) { return "Enter the customer name."; }
+    if (!orderDraft.paperSize) { return "Enter the paper size."; }
+    if (!isWholeNumber(orderDraft.pages) || orderDraft.pages < 1) { return "Pages must be a whole number of 1 or more."; }
+    if (!isWholeNumber(orderDraft.copies) || orderDraft.copies < 1) { return "Copies must be a whole number of 1 or more."; }
+
+    var validServiceTypes = [SERVICE_TYPES.DOCUMENT_PRINTING, SERVICE_TYPES.BOOKBINDING];
+    if (!arrayContainsValue(validServiceTypes, orderDraft.serviceType)) { return "Pick a valid service."; }
+
+    var allowedOptions = OPTIONS_FOR_SERVICE[orderDraft.serviceType];
+    if (!allowedOptions || !arrayContainsValue(allowedOptions, orderDraft.serviceOption)) {
+        return "That option is not offered for this service.";
+    }
+
+    var validTiers = [COLOR_TIERS.BLACK_TEXT, COLOR_TIERS.MINIMAL_COLOR, COLOR_TIERS.SMALL_IMAGE, COLOR_TIERS.FULL_COLOR];
+    if (!arrayContainsValue(validTiers, orderDraft.colorTier)) { return "Pick a valid color tier."; }
+
+    var validChannels = [ORDER_CHANNELS.CUSTOMER_PORTAL, ORDER_CHANNELS.MESSENGER, ORDER_CHANNELS.EMAIL, ORDER_CHANNELS.IN_PERSON, ORDER_CHANNELS.BLUETOOTH];
+    if (!arrayContainsValue(validChannels, orderDraft.fileChannel)) { return "Pick a valid receiving channel."; }
+
+    return "";
+}
+
+
+/* ==========================================================================
+   7. QUEUE RULES
+   ========================================================================== */
+function getNextUpOrder() {
+    return queuePeek(orderQueue);
+}
+function getWaitingCount() { return orderQueue.count; }
+// The board uses one FIFO queue; retain the lane helper interface for imported records.
+function getLaneQueue(queueType) { return orderQueue; }
+
+
+/* ==========================================================================
+   8. ALERTS
+   ========================================================================== */
+function addNotification(typeText, relatedOrderIdNumber, messageText, recipientTypeText) {
+    stackPush(notificationsStack, {
+        notificationId: nextNotificationId,
+        type: typeText,
+        relatedOrderId: relatedOrderIdNumber,
+        relatedItemId: null,
+        isBroadcast: false,
+        recipientType: recipientTypeText,
+        message: messageText,
+        isRead: false,
+        dateCreated: getShopIsoDate()
+    });
+    nextNotificationId = nextNotificationId + 1;
+}
+
+
+/* ==========================================================================
+   9. INVENTORY LINK (reads Module 6's localStorage snapshot)
+   ========================================================================== */
+function readInventorySnapshot() {
+    try {
+        var rawText = localStorage.getItem(INVENTORY_SNAPSHOT_KEY);
+        return rawText === null ? null : parseJson(rawText);
+    } catch (readError) { return null; }
+}
+
+function getInventoryRows(snapshotObject) {
+    if (snapshotObject && isArrayLike(snapshotObject.items)) { return snapshotObject.items; }
+    return null;
+}
+
+function normalizePaperKey(paperText) { return toLowerCaseText(trimWhitespace(paperText || "")); }
+
+function getInventoryStockValue(inventoryRow) {
+    if (!inventoryRow) { return NOT_A_NUMBER; }
+    var stockValue = inventoryRow.quantityOnHand;
+    if (stockValue === undefined || stockValue === null || trimWhitespace(stockValue) === "") { return NOT_A_NUMBER; }
+    stockValue = Number(stockValue);
+    return isFiniteNumber(stockValue) ? stockValue : NOT_A_NUMBER;
+}
+
+function getInventoryPiecesPerUnit(inventoryRow) {
+    var unitText = toLowerCaseText(trimWhitespace((inventoryRow && inventoryRow.unit) || ""));
+    return (unitText === STOCK_UNITS.REAM || unitText === STOCK_UNITS.REAMS) ? PIECES_PER_REAM : 1;
+}
+
+function getInventoryStockInPieces(inventoryRow) {
+    var stockValue = getInventoryStockValue(inventoryRow);
+    return isFiniteNumber(stockValue) ? stockValue * getInventoryPiecesPerUnit(inventoryRow) : NOT_A_NUMBER;
+}
+
+function getInventoryThresholdValue(inventoryRow) {
+    if (!inventoryRow) { return NOT_A_NUMBER; }
+    var thresholdValue = inventoryRow.reorderThreshold;
+    if (thresholdValue === undefined || thresholdValue === null || trimWhitespace(thresholdValue) === "") { return NOT_A_NUMBER; }
+    thresholdValue = Number(thresholdValue);
+    return isFiniteNumber(thresholdValue) ? thresholdValue : NOT_A_NUMBER;
+}
+
+function rowMatchesPaper(inventoryRow, paperKey) {
+    if (!inventoryRow || (inventoryRow.category !== INVENTORY_CATEGORIES.BOND_PAPER &&
+                          inventoryRow.category !== INVENTORY_CATEGORIES.PHOTO_PAPER &&
+                          inventoryRow.category !== INVENTORY_CATEGORIES.SPECIALTY_PAPER)) {
+        return false;
+    }
+    return normalizePaperKey(inventoryRow.materialDetail || "") === paperKey ||
+        normalizePaperKey(inventoryRow.itemName || "") === paperKey;
+}
+
+function findInventoryPaperRow(paperNameText, requiredQuantity) {
+    var inventoryRows = getInventoryRows(readInventorySnapshot());
+    var paperKey = normalizePaperKey(paperNameText);
+    var neededQuantity = requiredQuantity === undefined ? 1 : requiredQuantity;
+    var fallbackRow = null;
+    var rowIndex;
+    if (inventoryRows === null || paperKey === "") { return null; }
+    for (rowIndex = 0; rowIndex < inventoryRows.length; rowIndex = rowIndex + 1) {
+        var inventoryRow = inventoryRows[rowIndex];
+        if (!rowMatchesPaper(inventoryRow, paperKey)) { continue; }
+
+        var stockInPieces = getInventoryStockInPieces(inventoryRow);
+        if (!isFiniteNumber(stockInPieces) || stockInPieces < neededQuantity) { continue; }
+
+        if (inventoryRow.category === INVENTORY_CATEGORIES.BOND_PAPER) { return inventoryRow; }
+        if (fallbackRow === null) { fallbackRow = inventoryRow; }
+    }
+    return fallbackRow;
+}
+
+// NaN when Inventory has no record for this paper
+function getInventoryPaperStock(paperNameText, requiredQuantity) {
+    var inventoryRows = getInventoryRows(readInventorySnapshot());
+    var paperKey = normalizePaperKey(paperNameText);
+    var largestStock = NOT_A_NUMBER;
+    var rowIndex;
+
+    if (requiredQuantity !== undefined) {
+        var suitableRow = findInventoryPaperRow(paperNameText, requiredQuantity);
+        return suitableRow === null ? NOT_A_NUMBER : getInventoryStockInPieces(suitableRow);
+    }
+
+    if (inventoryRows === null || paperKey === "") { return NOT_A_NUMBER; }
+    for (rowIndex = 0; rowIndex < inventoryRows.length; rowIndex = rowIndex + 1) {
+        var inventoryRow = inventoryRows[rowIndex];
+        if (!rowMatchesPaper(inventoryRow, paperKey)) { continue; }
+
+        var stockInPieces = getInventoryStockInPieces(inventoryRow);
+        if (isFiniteNumber(stockInPieces) && (!isFiniteNumber(largestStock) || stockInPieces > largestStock)) {
+            largestStock = stockInPieces;
+        }
+    }
+    return largestStock;
+}
+
+// available ONLY when Inventory has a record for this paper with enough stock.
+// No record (or no snapshot) = not available.
+function isPaperSizeAvailable(paperNameText, requiredQuantity) {
+    var neededQuantity = requiredQuantity === undefined ? 1 : requiredQuantity;
+    var availableStock = getInventoryPaperStock(paperNameText, neededQuantity);
+    return isFiniteNumber(availableStock) && availableStock >= neededQuantity;
+}
+
+function refreshPaperSizeAvailability() {
+    var optionIndex;
+    for (optionIndex = 0; optionIndex < paperSizeInput.options.length; optionIndex = optionIndex + 1) {
+        var optionElement = paperSizeInput.options[optionIndex];
+        // "Others" stays clickable so staff can type a size; the typed size is checked below
+        optionElement.disabled = optionElement.value === MATERIAL_OTHER_OPTION ? false : !isPaperSizeAvailable(optionElement.value);
+    }
+    if (paperSizeInput.selectedIndex < 0 || paperSizeInput.options[paperSizeInput.selectedIndex].disabled) {
+        for (optionIndex = 0; optionIndex < paperSizeInput.options.length; optionIndex = optionIndex + 1) {
+            if (!paperSizeInput.options[optionIndex].disabled) { paperSizeInput.selectedIndex = optionIndex; break; }
+        }
+    }
+    paperSizeOtherInput.hidden = paperSizeInput.value !== MATERIAL_OTHER_OPTION;
+}
+
+function getPaperWarningText() {
+    var paperName = paperSizeInput.value;
+    if (paperName === MATERIAL_OTHER_OPTION) { paperName = trimWhitespace(paperSizeOtherInput.value); }
+    if (paperName !== "" && !isPaperSizeAvailable(paperName)) {
+        return "This paper size is not available in Inventory Management.";
+    }
+    return "";
+}
+
+// Check only. Module 6 deducts the stock itself when the order is Done
+// (receiveCompletedOrderUsage), so deducting here too would count it twice.
+function consumeOrderPaper(orderRecord) {
+    var sheetsNeeded = Number(orderRecord.pages) * Number(orderRecord.copies);
+    if (!isWholeNumber(sheetsNeeded) || sheetsNeeded < 1) {
+        return { ok: false, message: "Could not determine the number of sheets needed for this order." };
+    }
+
+    var inventoryRow = findInventoryPaperRow(orderRecord.paperSize, sheetsNeeded);
+    if (inventoryRow === null) {
+        var availableStock = getInventoryPaperStock(orderRecord.paperSize);
+        if (!isFiniteNumber(availableStock)) {
+            return { ok: false, message: "No usable stock record was found for " + orderRecord.paperSize + " in Inventory Management." };
+        }
+        return { ok: false, message: "Insufficient " + orderRecord.paperSize + " paper in Inventory Management. Need " + sheetsNeeded + ", available " + availableStock + "." };
+    }
+    return { ok: true };
+}
+
+function getInventoryLowStockCount() {
+    var inventoryRows = getInventoryRows(readInventorySnapshot());
+    var lowCount = 0;
+    var rowIndex;
+    if (inventoryRows === null) { return 0; }
+    for (rowIndex = 0; rowIndex < inventoryRows.length; rowIndex = rowIndex + 1) {
+        var quantityInPieces = getInventoryStockInPieces(inventoryRows[rowIndex]);
+        var thresholdValue = getInventoryThresholdValue(inventoryRows[rowIndex]);
+        if (isFiniteNumber(quantityInPieces) &&
+            (isFiniteNumber(thresholdValue) ? quantityInPieces <= thresholdValue : quantityInPieces <= DEFAULT_REORDER_LEVEL)) {
+            lowCount = lowCount + 1;
+        }
+    }
+    return lowCount;
+}
+
+
+/* ==========================================================================
+   10. ORDER ACTIONS
+   ========================================================================== */
+function saveOrder() {
+    var newOrder = {
+        orderId: nextOrderId,
+        customerId: null,
+        customerName: trimWhitespace(customerNameInput.value),
+        subject: trimWhitespace(subjectInput.value),
+        notes: trimWhitespace(notesInput.value),
+        serviceType: serviceTypeInput.value,
+        serviceOption: serviceOptionInput.value,
+        paperSize: paperSizeInput.value === MATERIAL_OTHER_OPTION ? trimWhitespace(paperSizeOtherInput.value) : paperSizeInput.value,
+        colorTier: colorTierInput.value,
+        pages: Number(pagesInput.value),
+        copies: Number(copiesInput.value),
+        fileChannel: fileChannelInput.value,
+        isRush: isRushInput.checked
+    };
+
+    var errorText = validateOrder(newOrder);
+
+    if (errorText === "" && !isPaperSizeAvailable(newOrder.paperSize)) {
+        errorText = "This paper size is not available in Inventory Management.";
+    }
+
+    if (errorText === "" && !isPaperSizeAvailable(newOrder.paperSize, newOrder.pages * newOrder.copies)) {
+        errorText = "Not enough " + newOrder.paperSize + " paper. Need " + (newOrder.pages * newOrder.copies) +
+            ", available " + getInventoryPaperStock(newOrder.paperSize) + ".";
+    }
+
+    orderError.textContent = errorText;
+    if (errorText !== "") { return; }
+
+    newOrder.status = ORDER_STATUS.QUEUED;
+    newOrder.pricePerPage = PRICE_PER_PAGE[newOrder.colorTier];
+    newOrder.baseTotalPrice = calculateBasePrice(newOrder.colorTier, newOrder.pages, newOrder.copies);
+
+    var promoResult = applyPromo(newOrder.baseTotalPrice);
+    newOrder.promoId = promoResult.promoId;
+    newOrder.discountAmount = promoResult.discountAmount;
+    newOrder.totalPrice = newOrder.baseTotalPrice - newOrder.discountAmount;
+
+    newOrder.fileName = null;
+    newOrder.fileCount = 0;
+    newOrder.priorityLevel = newOrder.isRush ? "high" : "low";
+    newOrder.queueType = newOrder.isRush ? QUEUE_TYPES.ADVANCE : QUEUE_TYPES.WALK_IN;
+    newOrder.requiresDownPayment = false;
+    newOrder.downPaymentAmount = 0;
+    newOrder.paymentMethod = null;
+    newOrder.paymentStatus = PAYMENT_STATUS.PENDING;
+    newOrder.proofOfPaymentFile = null;
+    newOrder.fileDisposed = false;
+    newOrder.dateDisposed = null;
+
+    newOrder.dateAdded = getShopIsoDate();
+    newOrder.dateCompleted = null;
+    newOrder.unclaimedReason = null;
+    newOrder.daysUnclaimed = null;
+
+    nextOrderId = nextOrderId + 1;
+    linkedListInsertAtHead(ordersList, newOrder);
+    queueEnqueue(orderQueue, newOrder);
+
+    // MODULE 3 HOOK — log the order submission here.
+
+    addNotification(NOTIFICATION_TYPES.NEW_ORDER, newOrder.orderId,
+        "Order " + formatOrderId(newOrder.orderId) + " (" + newOrder.customerName + ") added to the order queue", RECIPIENT_TYPES.STAFF);
+
+    closeOrderModal();
+    commitChanges();
+}
+
+function startNextOrder() {
+    var nextUpOrder = getNextUpOrder();
+    if (nextUpOrder === null) { return; }
+
+    var inventoryResult = consumeOrderPaper(nextUpOrder);
+    if (!inventoryResult.ok) {
+        queueHint.textContent = inventoryResult.message;
+        return;
+    }
+
+    queueDequeue(orderQueue);
+    setOrderStatus(nextUpOrder, ORDER_STATUS.PRINTING);
+    commitChanges();
+}
+
+function cancelOrder(targetOrder) {
+    if (targetOrder.status === ORDER_STATUS.QUEUED) {
+        queueRemoveItem(orderQueue, targetOrder);
+    }
+    setOrderStatus(targetOrder, ORDER_STATUS.CANCELLED);
+    commitChanges();
+}
+
+function setOrderStatus(targetOrder, newStatusText) {
+    targetOrder.status = newStatusText;
+
+    if (newStatusText === ORDER_STATUS.DONE) {
+        targetOrder.dateCompleted = getShopIsoDate();
+        targetOrder.daysUnclaimed = 0;
+
+        addNotification(NOTIFICATION_TYPES.ORDER_READY, targetOrder.orderId,
+            "Order " + formatOrderId(targetOrder.orderId) + " (" + targetOrder.customerName +
+            ") is ready for pickup", RECIPIENT_TYPES.CUSTOMER);
+
+        // MODULE 4: dispose stored files now that the order is Done
+        sharedStore.emitOrderDone(targetOrder);
+    }
+
+    // MODULE 3 HOOK — log the status change here.
+}
+
+function checkUnclaimedOrders() {
+    var currentNode = ordersList.head;
+    while (currentNode !== null) {
+        var orderRecord = currentNode.value;
+        if (orderRecord.status === ORDER_STATUS.DONE || orderRecord.status === ORDER_STATUS.UNCLAIMED) {
+            var elapsedMilliseconds = getShopNowMs() - isoStringToMilliseconds(orderRecord.dateCompleted);
+            orderRecord.daysUnclaimed = floorNumber(elapsedMilliseconds / MILLISECONDS_PER_DAY);
+
+            if (orderRecord.status === ORDER_STATUS.DONE && elapsedMilliseconds > UNCLAIMED_THRESHOLD_DAYS * MILLISECONDS_PER_DAY) {
+                setOrderStatus(orderRecord, ORDER_STATUS.UNCLAIMED);
+                orderRecord.unclaimedReason = "Not picked up after " + UNCLAIMED_THRESHOLD_DAYS + " days";
+                addNotification(NOTIFICATION_TYPES.UNCLAIMED_ORDER, orderRecord.orderId,
+                    "Order " + formatOrderId(orderRecord.orderId) + " (" + orderRecord.customerName +
+                    ") has waited over " + UNCLAIMED_THRESHOLD_DAYS + " days", RECIPIENT_TYPES.STAFF);
+            }
+        }
+        currentNode = currentNode.next;
+    }
+}
+
+function clearAllData() {
+    ordersList = createLinkedList();
+    orderQueue = createCircularQueue(LANE_CAPACITY);
+    notificationsStack = createStack();
+    nextOrderId = 1;
+    nextNotificationId = 1;
+    dayOffset = 0;
+    try { localStorage.removeItem(ORDERS_SNAPSHOT_KEY); } catch (snapshotError) {}
+    try { localStorage.removeItem(APP_STATE_KEY); } catch (stateError) {}
+    searchInput.value = "";
+
+    if (sharedStore.fileBridge !== null && sharedStore.fileBridge.onStoreReset) {
+        sharedStore.fileBridge.onStoreReset();
+    }
+    commitChanges();
+}
+
+/* Import orders submitted by the customer page through localStorage. */
+function importCustomerOrders() {
+    var keyIndex;
+    var rawText;
+    var importedOrders;
+    var orderIndex;
+    var sourceOrder;
+    var importedOrder;
+    for (keyIndex = 0; keyIndex < CUSTOMER_ORDERS_KEYS.length; keyIndex = keyIndex + 1) {
+        try { rawText = localStorage.getItem(CUSTOMER_ORDERS_KEYS[keyIndex]); } catch (readError) { rawText = null; }
+        if (rawText === null) { continue; }
+        try { importedOrders = parseJson(rawText); } catch (parseError) { importedOrders = null; }
+        if (!isArrayLike(importedOrders)) { continue; }
+        for (orderIndex = 0; orderIndex < importedOrders.length; orderIndex = orderIndex + 1) {
+            sourceOrder = importedOrders[orderIndex];
+            if (!sourceOrder || sourceOrder.orderId === undefined || linkedListFindOrder(ordersList, sourceOrder.orderId) !== null) { continue; }
+            importedOrder = sourceOrder;
+            if (importedOrder.status === undefined) { importedOrder.status = ORDER_STATUS.QUEUED; }
+            // Normalize customer-form fields to the owner-board schema without
+            // discarding the fields supplied by the customer page.
+            if (importedOrder.customerName === undefined) { importedOrder.customerName = "Customer"; }
+            if (importedOrder.subject === undefined) { importedOrder.subject = importedOrder.fileName || ""; }
+            if (importedOrder.serviceType === undefined) { importedOrder.serviceType = SERVICE_TYPES.DOCUMENT_PRINTING; }
+            if (importedOrder.serviceOption === undefined) { importedOrder.serviceOption = SERVICE_OPTIONS.NONE; }
+            if (importedOrder.paperSize === undefined) { importedOrder.paperSize = "A4"; }
+            if (importedOrder.colorTier === undefined) { importedOrder.colorTier = COLOR_TIERS.BLACK_TEXT; }
+            if (importedOrder.pages === undefined) { importedOrder.pages = 1; }
+            if (importedOrder.copies === undefined) { importedOrder.copies = 1; }
+            if (importedOrder.fileChannel === undefined) { importedOrder.fileChannel = ORDER_CHANNELS.CUSTOMER_PORTAL; }
+            if (importedOrder.dateAdded === undefined) { importedOrder.dateAdded = getShopIsoDate(); }
+            if (importedOrder.totalPrice === undefined) { importedOrder.totalPrice = 0; }
+            if (importedOrder.queueType === undefined) {
+                importedOrder.queueType = importedOrder.isRush ? QUEUE_TYPES.ADVANCE : QUEUE_TYPES.WALK_IN;
+            }
+            if (importedOrder.orderId >= nextOrderId) { nextOrderId = importedOrder.orderId + 1; }
+            linkedListInsertAtHead(ordersList, importedOrder);
+            if (importedOrder.status === ORDER_STATUS.QUEUED) { queueEnqueue(getLaneQueue(importedOrder.queueType), importedOrder); }
+        }
+    }
+}
+
+function buildSampleOrder(orderId, customerName, fileName, statusText, paperSizeText, serviceTypeText, serviceOptionText, colorTierText, pagesCount, copiesCount, isRushOrder, paymentStatusText, dateAddedText, dateCompletedText, daysUnclaimedCount, unclaimedReasonText) {
+    var baseTotalPrice = calculateBasePrice(colorTierText, pagesCount, copiesCount);
+    return {
+        orderId: orderId,
+        customerId: 1001,
+        customerName: customerName,
+        subject: fileName,
+        fileName: fileName,
+        fileCount: 1,
+        notes: "Sample order imported from the customer module.",
+        fileDisposed: false,
+        dateDisposed: null,
+        serviceType: serviceTypeText,
+        serviceOption: serviceOptionText,
+        paperSize: paperSizeText,
+        pages: pagesCount,
+        copies: copiesCount,
+        colorTier: colorTierText,
+        isRush: isRushOrder,
+        queueType: isRushOrder ? QUEUE_TYPES.ADVANCE : QUEUE_TYPES.WALK_IN,
+        priorityLevel: isRushOrder ? "high" : "low",
+        pricePerPage: PRICE_PER_PAGE[colorTierText],
+        baseTotalPrice: baseTotalPrice,
+        promoId: null,
+        discountAmount: 0,
+        totalPrice: baseTotalPrice,
+        requiresDownPayment: false,
+        downPaymentAmount: 0,
+        paymentMethod: "GCash",
+        paymentStatus: paymentStatusText,
+        proofOfPaymentFile: "",
+        status: statusText,
+        dateAdded: dateAddedText,
+        dateCompleted: dateCompletedText,
+        unclaimedReason: unclaimedReasonText,
+        daysUnclaimed: daysUnclaimedCount,
+        fileChannel: ORDER_CHANNELS.CUSTOMER_PORTAL
+    };
+}
+
+function seedSampleCustomerOrders() {
+    var keyIndex;
+    var rawText;
+    var storedOrders;
+    var existingOrderCount = 0;
+    var demoOrders;
+    var orderIndex;
+    var sampleOrder;
+
+    for (keyIndex = 0; keyIndex < CUSTOMER_ORDERS_KEYS.length; keyIndex = keyIndex + 1) {
+        try { rawText = localStorage.getItem(CUSTOMER_ORDERS_KEYS[keyIndex]); } catch (readError) { rawText = null; }
+        if (rawText === null) { continue; }
+        try { storedOrders = parseJson(rawText); } catch (parseError) { storedOrders = null; }
+        if (isArrayLike(storedOrders) && storedOrders.length > 0) { existingOrderCount = existingOrderCount + 1; }
+    }
+
+    if (existingOrderCount > 0 || ordersList.size > 0) { return; }
+
+    demoOrders = [
+        buildSampleOrder(1042, "Juan Dela Cruz", "thesis-final.pdf", ORDER_STATUS.PRINTING, "A4", SERVICE_TYPES.DOCUMENT_PRINTING, SERVICE_OPTIONS.SPIRAL_BINDING, COLOR_TIERS.BLACK_TEXT, 85, 2, true, PAYMENT_STATUS.DOWN_PAYMENT_PAID, "2026-09-28T13:20:00", "", 0, ""),
+        buildSampleOrder(1038, "Juan Dela Cruz", "assignment-4.pdf", ORDER_STATUS.DONE, "Short", SERVICE_TYPES.DOCUMENT_PRINTING, SERVICE_OPTIONS.NONE, COLOR_TIERS.MINIMAL_COLOR, 12, 1, false, PAYMENT_STATUS.FULLY_PAID, "2026-09-27T14:10:00", "2026-09-27T18:00:00", 0, ""),
+        buildSampleOrder(1029, "Juan Dela Cruz", "research-paper.pdf", ORDER_STATUS.UNCLAIMED, "Long", SERVICE_TYPES.DOCUMENT_PRINTING, SERVICE_OPTIONS.LAMINATION, COLOR_TIERS.SMALL_IMAGE, 25, 1, false, PAYMENT_STATUS.FULLY_PAID, "2026-09-25T10:15:00", "2026-09-25T15:30:00", 3, "Customer did not show up"),
+        buildSampleOrder(1017, "Juan Dela Cruz", "class-handouts.pdf", ORDER_STATUS.CANCELLED, "A4", SERVICE_TYPES.DOCUMENT_PRINTING, SERVICE_OPTIONS.NONE, COLOR_TIERS.BLACK_TEXT, 20, 3, false, PAYMENT_STATUS.PENDING, "2026-09-20T09:40:00", "", 0, "Cancelled by customer"),
+        buildSampleOrder(1044, "Juan Dela Cruz", "report.pdf", ORDER_STATUS.QUEUED, "A4", SERVICE_TYPES.DOCUMENT_PRINTING, SERVICE_OPTIONS.NONE, COLOR_TIERS.FULL_COLOR, 10, 1, false, PAYMENT_STATUS.PENDING, "2026-09-28T16:40:00", "", 0, "")
+    ];
+
+    for (orderIndex = 0; orderIndex < demoOrders.length; orderIndex = orderIndex + 1) {
+        sampleOrder = demoOrders[orderIndex];
+        if (sampleOrder.orderId >= nextOrderId) { nextOrderId = sampleOrder.orderId + 1; }
+    }
+
+    try { localStorage.setItem(CUSTOMER_ORDERS_KEYS[0], stringifyJson(demoOrders)); } catch (seedError) {}
+    importCustomerOrders();
+    commitChanges();
+}
+
+
+/* ==========================================================================
+   11. RENDERING
+   ========================================================================== */
+function renderAll() {
+    renderStats();
+    renderTable();
+    updateStatusTabs();
+
+    var nextUpOrder = getNextUpOrder();
+    nextButton.disabled = nextUpOrder === null;
+    nextButton.textContent = nextUpOrder ? "Start next: " + formatOrderId(nextUpOrder.orderId) : "Queue is empty";
+}
+
+function renderStats() {
+    var shopNow = new Date(getShopNowMs());
+    var startOfTodayMs = new Date(shopNow.getFullYear(), shopNow.getMonth(), shopNow.getDate()).getTime();
+    var ordersTodayCount = 0;
+    var unclaimedCount = 0;
+    var currentNode = ordersList.head;
+
+    while (currentNode !== null) {
+        var orderRecord = currentNode.value;
+        if (isoStringToMilliseconds(orderRecord.dateAdded) >= startOfTodayMs) {
+            ordersTodayCount = ordersTodayCount + 1;
+        }
+        if (orderRecord.status === ORDER_STATUS.UNCLAIMED) { unclaimedCount = unclaimedCount + 1; }
+        currentNode = currentNode.next;
+    }
+
+    document.getElementById("stat-today").textContent = ordersTodayCount;
+    document.getElementById("stat-queue").textContent = getWaitingCount();
+    document.getElementById("stat-lowstock").textContent = getInventoryLowStockCount();
+    document.getElementById("stat-unclaimed").textContent = unclaimedCount;
+}
+
+//  Counts orders per status and updates the tab numbers and the selected tab
+function updateStatusTabs() {
+    var statusCounts = { all: 0, queued: 0, printing: 0, done: 0, unclaimed: 0, cancelled: 0 };
+    var currentNode = ordersList.head;
+    var tabIndex;
+    var filterName;
+
+    while (currentNode !== null) {
+        statusCounts.all = statusCounts.all + 1;
+        if (statusCounts[currentNode.value.status] !== undefined) {
+            statusCounts[currentNode.value.status] = statusCounts[currentNode.value.status] + 1;
+        }
+        currentNode = currentNode.next;
+    }
+
+    for (tabIndex = 0; tabIndex < statusTabsElement.children.length; tabIndex = tabIndex + 1) {
+        var tabButton = statusTabsElement.children[tabIndex];
+        filterName = tabButton.getAttribute("data-filter");
+        tabButton.querySelector(".tab-count").textContent = statusCounts[filterName];
+        tabButton.setAttribute("aria-selected", filterName === activeStatusFilter ? "true" : "false");
+    }
+}
+
+function renderTable() {
+    orderTableBody.textContent = "";
+
+    var queryText = toLowerCaseText(trimWhitespace(searchInput.value));
+    var nextUpOrder = getNextUpOrder();
+    var shownCount = 0;
+    var currentNode = ordersList.head;
+
+    while (currentNode !== null) {
+        var orderRecord = currentNode.value;
+        var haystackText = toLowerCaseText(
+            formatOrderId(orderRecord.orderId) + " " + orderRecord.customerName + " " + orderRecord.subject + " " +
+            orderRecord.serviceType + " " + orderRecord.serviceOption + " " + orderRecord.paperSize + " " +
+            orderRecord.colorTier + " " + orderRecord.status + " " +
+            (orderRecord.fileName === null || orderRecord.fileName === undefined ? "" : orderRecord.fileName) + " " +
+            (orderRecord.isRush ? "rush" : "walk-in")
+        );
+        if ((activeStatusFilter === "all" || orderRecord.status === activeStatusFilter) &&
+            textIncludes(haystackText, queryText)) {
+            orderTableBody.appendChild(buildOrderRow(orderRecord, nextUpOrder));
+            shownCount = shownCount + 1;
+        }
+        currentNode = currentNode.next;
+    }
+
+    if (shownCount === 0) {
+        var emptyElement = document.createElement("div");
+        emptyElement.className = "empty-state";
+        var emptyTitle = document.createElement("p");
+        emptyTitle.className = "empty-title";
+        emptyTitle.textContent = "No orders found";
+        var emptyText = document.createElement("p");
+        emptyText.className = "empty-text";
+        emptyText.textContent = ordersList.size === 0
+            ? "Orders from the customer page will show up here."
+            : "No orders match your search or this status.";
+        emptyElement.appendChild(emptyTitle);
+        emptyElement.appendChild(emptyText);
+        orderTableBody.appendChild(emptyElement);
+    }
+}
+
+function buildTextCell(valueText, labelText) {
+    var fieldElement = document.createElement("div");
+    fieldElement.className = "field";
+    var labelElement = document.createElement("span");
+    labelElement.className = "field-label";
+    labelElement.textContent = labelText;
+    var valueElement = document.createElement("span");
+    valueElement.className = "field-value";
+    valueElement.textContent = valueText;
+    fieldElement.appendChild(labelElement);
+    fieldElement.appendChild(valueElement);
+    return fieldElement;
+}
+
+function buildFileCell(orderRecord) {
+    var fileCell = document.createElement("div");
+    fileCell.className = "field";
+    var labelElement = document.createElement("span");
+    labelElement.className = "field-label";
+    labelElement.textContent = "File";
+    var valueElement = document.createElement("span");
+    valueElement.className = "field-value";
+    fileCell.appendChild(labelElement);
+    fileCell.appendChild(valueElement);
+
+    var fileSummary = sharedStore.fileBridge === null
+        ? getSnapshotFileSummary(orderRecord.orderId)
+        : sharedStore.fileBridge.getFileSummary(orderRecord.orderId);
+
+    if (fileSummary === null || fileSummary === undefined) {
+        valueElement.textContent = "No file yet";
+        return fileCell;
+    }
+
+    var statusBadge = document.createElement("span");
+
+    if (fileSummary.fileDisposed) {
+        statusBadge.className = "badge badge-inactive";
+        statusBadge.textContent = "Disposed";
+        statusBadge.title = fileSummary.fileName + " — disposed per data-privacy rule";
+    } else if (fileSummary.validationResult === undefined || fileSummary.validationResult === VALIDATION_RESULTS.VALID) {
+        statusBadge.className = "badge badge-active";
+        statusBadge.textContent = VALIDATION_RESULTS.VALID;
+        statusBadge.title = fileSummary.fileName;
+    } else {
+        statusBadge.className = "badge badge-inactive";
+        statusBadge.textContent = fileSummary.validationResult;
+        statusBadge.title = fileSummary.fileName + " — " + fileSummary.flagReasonText;
+    }
+
+    valueElement.appendChild(statusBadge);
+    valueElement.appendChild(document.createTextNode(" " + fileSummary.fileName));
+    return fileCell;
+}
+
+function buildActionButton(labelText, classText, isDisabled, disabledHintText, onClickHandler) {
+    var buttonElement = document.createElement("button");
+    buttonElement.type = "button";
+    buttonElement.className = "btn " + classText + " btn-small";
+    buttonElement.textContent = labelText;
+    buttonElement.style.whiteSpace = "nowrap";
+    buttonElement.disabled = isDisabled;
+    if (isDisabled) { buttonElement.title = disabledHintText; }
+    buttonElement.addEventListener("click", onClickHandler);
+    return buttonElement;
+}
+
+function buildOrderRow(orderRecord, nextUpOrder) {
+    var cardElement = document.createElement("article");
+    var isNextUp = nextUpOrder !== null && nextUpOrder.orderId === orderRecord.orderId;
+    cardElement.className = isNextUp ? "order-card is-next-up" : "order-card";
+
+    var laneLabel = orderRecord.isRush ? "Rush" : "Walk-in";
+    var queueText = laneLabel;
+    if (orderRecord.status === ORDER_STATUS.QUEUED) {
+        queueText = laneLabel + " #" + queuePositionOf(getLaneQueue(orderRecord.queueType), orderRecord);
+    }
+
+    var customerText = orderRecord.customerName;
+    if (orderRecord.subject !== "") { customerText = customerText + " · " + orderRecord.subject; }
+
+    var disclosureElement = document.createElement("details");
+    disclosureElement.className = "order-disclosure";
+    var summaryElement = document.createElement("summary");
+    var headElement = document.createElement("div");
+    headElement.className = "card-head";
+    var idElement = document.createElement("strong");
+    idElement.className = "card-id";
+    idElement.textContent = formatOrderId(orderRecord.orderId);
+
+    var statusBadge = document.createElement("span");
+    var isProblem = orderRecord.status === ORDER_STATUS.CANCELLED || orderRecord.status === ORDER_STATUS.UNCLAIMED;
+    statusBadge.className = isProblem ? "badge badge-inactive" : "badge badge-active";
+    statusBadge.textContent = orderRecord.status;
+    if (orderRecord.status === ORDER_STATUS.UNCLAIMED) {
+        statusBadge.textContent = orderRecord.status + " (" + orderRecord.daysUnclaimed + "d)";
+        statusBadge.title = orderRecord.unclaimedReason;
+    }
+    headElement.appendChild(idElement);
+
+    var customerElement = document.createElement("p");
+    customerElement.className = "card-customer";
+    customerElement.textContent = customerText;
+    summaryElement.appendChild(headElement);
+    summaryElement.appendChild(customerElement);
+
+    var detailsElement = document.createElement("p");
+    detailsElement.className = "card-details";
+    detailsElement.textContent = orderRecord.serviceType + " · " + orderRecord.serviceOption + " · " +
+        orderRecord.paperSize + " · " + orderRecord.colorTier + " · " +
+        orderRecord.pages + " pages × " + orderRecord.copies + " copies";
+
+    var metaElement = document.createElement("div");
+    metaElement.className = "card-meta";
+    metaElement.appendChild(buildTextCell(queueText, "Queue"));
+    metaElement.appendChild(buildFileCell(orderRecord));
+    metaElement.appendChild(buildTextCell(formatPeso(orderRecord.totalPrice), "Total"));
+
+    var actionsElement = document.createElement("div");
+    actionsElement.className = "card-actions";
+
+    if (orderRecord.status === ORDER_STATUS.QUEUED) {
+        actionsElement.appendChild(buildActionButton("Start", "btn-secondary", !isNextUp,
+            "An earlier order or a rush order goes first", startNextOrder));
+        actionsElement.appendChild(buildActionButton("Cancel", "btn-danger", false, "", function () {
+            cancelOrder(orderRecord);
+        }));
+    }
+
+    if (orderRecord.status === ORDER_STATUS.PRINTING) {
+        actionsElement.appendChild(buildActionButton("Done", "btn-secondary", false, "", function () {
+            setOrderStatus(orderRecord, ORDER_STATUS.DONE);
+            commitChanges();
+        }));
+    }
+
+    if (orderRecord.status === ORDER_STATUS.UNCLAIMED) {
+        actionsElement.appendChild(buildActionButton("Cancel", "btn-danger", false, "", function () {
+            cancelOrder(orderRecord);
+        }));
+    }
+
+    disclosureElement.appendChild(summaryElement);
+    disclosureElement.appendChild(statusBadge);
+    disclosureElement.appendChild(detailsElement);
+    disclosureElement.appendChild(metaElement);
+    disclosureElement.appendChild(actionsElement);
+    cardElement.appendChild(disclosureElement);
+    return cardElement;
+}
+
+function buildFeedItem(labelText, detailText, timeText) {
+    var itemElement = document.createElement("li");
+    itemElement.className = "activity-item";
+
+    var labelSpan = document.createElement("span");
+    labelSpan.className = "badge badge-role";
+    labelSpan.textContent = labelText;
+
+    var detailSpan = document.createElement("span");
+    detailSpan.className = "activity-text";
+    detailSpan.textContent = detailText;
+
+    var timeSpan = document.createElement("span");
+    timeSpan.className = "activity-time";
+    timeSpan.textContent = timeText;
+
+    itemElement.appendChild(labelSpan);
+    itemElement.appendChild(detailSpan);
+    itemElement.appendChild(timeSpan);
+    return itemElement;
+}
+
+function renderNotifications() {
+    notificationListElement.textContent = "";
+
+    if (notificationsStack.stackCount === 0) {
+        notificationListElement.appendChild(buildFeedItem("None", "No alerts yet.", ""));
+        return;
+    }
+
+    var offsetIndex;
+    for (offsetIndex = 0; offsetIndex < notificationsStack.stackCount; offsetIndex = offsetIndex + 1) {
+        var notificationRecord = stackGetFromTop(notificationsStack, offsetIndex);
+        notificationListElement.appendChild(buildFeedItem(notificationRecord.type, notificationRecord.message, formatTimestamp(notificationRecord.dateCreated)));
+    }
+}
+
+
+/* ==========================================================================
+   12. NEW ORDER DIALOG
+   ========================================================================== */
+function syncForm() {
+    var allowedOptions = OPTIONS_FOR_SERVICE[serviceTypeInput.value];
+    var keepValue = serviceOptionInput.value;
+    var optionIndex;
+
+    serviceOptionInput.textContent = "";
+    for (optionIndex = 0; optionIndex < allowedOptions.length; optionIndex = optionIndex + 1) {
+        var optionElement = document.createElement("option");
+        optionElement.value = allowedOptions[optionIndex];
+        optionElement.textContent = allowedOptions[optionIndex];
+        serviceOptionInput.appendChild(optionElement);
+    }
+    if (arrayContainsValue(allowedOptions, keepValue)) { serviceOptionInput.value = keepValue; }
+
+    refreshPaperSizeAvailability();
+
+    var pageCount = Number(pagesInput.value);
+    var copyCount = Number(copiesInput.value);
+
+    ratePreview.textContent = formatPeso(PRICE_PER_PAGE[colorTierInput.value]);
+    totalPreview.textContent = (pageCount > 0 && copyCount > 0)
+        ? formatPeso(calculateBasePrice(colorTierInput.value, pageCount, copyCount)) : "₱0";
+
+    orderError.textContent = getPaperWarningText();
+}
+
+function openOrderModal() {
+    lastFocusedElement = document.activeElement;
+
+    customerNameInput.value = "";
+    subjectInput.value = "";
+    notesInput.value = "";
+    pagesInput.value = 1;
+    copiesInput.value = 1;
+    isRushInput.checked = false;
+    paperSizeInput.selectedIndex = 0;
+    paperSizeOtherInput.value = "";
+    paperSizeOtherInput.hidden = true;
+    orderError.textContent = "";
+    syncForm();
+
+    orderModal.hidden = false;
+    addClassToken(orderModal, "open");
+    customerNameInput.focus();
+}
+
+function closeOrderModal() {
+    orderModal.hidden = true;
+    removeClassToken(orderModal, "open");
+
+    if (lastFocusedElement) { lastFocusedElement.focus(); }
+}
+
+
+/* ==========================================================================
+   13. EVENTS
+   ========================================================================== */
+document.getElementById("modal-close").addEventListener("click", closeOrderModal);
+document.getElementById("cancel-btn").addEventListener("click", closeOrderModal);
+document.getElementById("save-btn").addEventListener("click", saveOrder);
+
+document.getElementById("reset-btn").addEventListener("click", clearAllData);
+
+nextButton.addEventListener("click", startNextOrder);
+searchInput.addEventListener("input", renderTable);
+
+//  Status tabs: pick which orders to show
+var tabButtonIndex;
+for (tabButtonIndex = 0; tabButtonIndex < statusTabsElement.children.length; tabButtonIndex = tabButtonIndex + 1) {
+    statusTabsElement.children[tabButtonIndex].addEventListener("click", function (clickEvent) {
+        activeStatusFilter = clickEvent.currentTarget.getAttribute("data-filter");
+        renderAll();
+    });
+}
+
+orderModal.addEventListener("input", syncForm);
+orderModal.addEventListener("change", syncForm);
+
+paperSizeInput.addEventListener("change", function () {
+    refreshPaperSizeAvailability();
+    if (paperSizeInput.value === MATERIAL_OTHER_OPTION) { paperSizeOtherInput.focus(); }
+    orderError.textContent = getPaperWarningText();
+});
+
+paperSizeOtherInput.addEventListener("input", function () {
+    orderError.textContent = getPaperWarningText();
+});
+
+orderModal.addEventListener("click", function (clickEvent) {
+    if (clickEvent.target === orderModal) { closeOrderModal(); }
+});
+
+document.addEventListener("keydown", function (keyboardEvent) {
+    if (keyboardEvent.key === "Escape" && !orderModal.hidden) { closeOrderModal(); }
+});
+
+orderModal.addEventListener("keydown", function (keyboardEvent) {
+    if (keyboardEvent.key === "Enter" && keyboardEvent.target.type === "text") {
+        keyboardEvent.preventDefault();
+        saveOrder();
+    }
+});
+
+
+/* ==========================================================================
+   14. CROSS-FILE SNAPSHOT (localStorage) — link with Module 4 and Module 6
+   ========================================================================== */
+function readSnapshotOrders() {
+    var rawText = null;
+    try { rawText = localStorage.getItem(ORDERS_SNAPSHOT_KEY); } catch (readError) { return null; }
+    if (rawText === null) { return null; }
+    try { return parseJson(rawText); } catch (parseError) { return null; }
+}
+
+function saveSnapshot() {
+    var ordersData = [];
+    var currentNode = ordersList.head;
+    while (currentNode !== null) { ordersData[ordersData.length] = currentNode.value; currentNode = currentNode.next; }
+
+    try { localStorage.setItem(ORDERS_SNAPSHOT_KEY, stringifyJson(ordersData)); } catch (snapshotError) {}
+    try {
+        localStorage.setItem(APP_STATE_KEY, stringifyJson({
+            notifications: notificationsStack.stackData,
+            nextNotificationId: nextNotificationId,
+            nextOrderId: nextOrderId,
+            dayOffset: dayOffset
+        }));
+    } catch (stateError) {}
+}
+
+function restoreSavedState() {
+    var savedOrders = readSnapshotOrders();
+    var orderIndex;
+
+    if (isArrayLike(savedOrders)) {
+        // snapshot is newest-first; insert from the tail so the head stays newest
+        for (orderIndex = savedOrders.length - 1; orderIndex >= 0; orderIndex = orderIndex - 1) {
+            var savedOrder = savedOrders[orderIndex];
+            if (!savedOrder || typeof savedOrder.orderId !== "number") { continue; }
+            linkedListInsertAtHead(ordersList, savedOrder);
+            if (savedOrder.status === ORDER_STATUS.QUEUED) { queueEnqueue(getLaneQueue(savedOrder.queueType), savedOrder); }
+            if (savedOrder.orderId >= nextOrderId) { nextOrderId = savedOrder.orderId + 1; }
+        }
+    }
+
+    try {
+        var rawState = localStorage.getItem(APP_STATE_KEY);
+        var savedState = rawState === null ? null : parseJson(rawState);
+        if (savedState) {
+            if (isArrayLike(savedState.notifications)) {
+                notificationsStack.stackData = savedState.notifications;
+                notificationsStack.stackCount = savedState.notifications.length;
+            }
+            if (isFiniteNumber(savedState.nextNotificationId)) { nextNotificationId = savedState.nextNotificationId; }
+            if (isFiniteNumber(savedState.nextOrderId) && savedState.nextOrderId > nextOrderId) { nextOrderId = savedState.nextOrderId; }
+            if (isFiniteNumber(savedState.dayOffset)) { dayOffset = savedState.dayOffset; }
+        }
+    } catch (stateError) {}
+}
+
+function publishLatestOrderId() {
+    var orderExists = ordersList.head !== null;
+    var latestOrderId = orderExists ? ordersList.head.value.orderId : nextOrderId;
+
+    var handoff = {
+        orderId: latestOrderId,
+        orderNumber: formatOrderId(latestOrderId),
+        orderExists: orderExists,
+        dateSent: getShopIsoDate(),
+        messageId: new Date().getTime()
+    };
+
+    try { localStorage.setItem(ORDER_ID_HANDOFF_KEY, stringifyJson(handoff)); } catch (handoffError) {}
+    window.dispatchEvent(new CustomEvent("gsj:order-id", { detail: handoff }));
+}
+
+function commitChanges() {
+    checkUnclaimedOrders();
+    renderAll();
+    saveSnapshot();
+    publishLatestOrderId();
+    window.dispatchEvent(new CustomEvent("gsj:orders-updated"));
+}
+
+function getSnapshotFileSummary(orderIdNumber) {
+    var snapshotOrders = readSnapshotOrders();
+    var orderIndex;
+    if (!isArrayLike(snapshotOrders)) { return null; }
+    for (orderIndex = 0; orderIndex < snapshotOrders.length; orderIndex = orderIndex + 1) {
+        if (snapshotOrders[orderIndex].orderId === orderIdNumber &&
+            snapshotOrders[orderIndex].fileName !== null && snapshotOrders[orderIndex].fileName !== undefined) {
+            return {
+                fileName: snapshotOrders[orderIndex].fileName,
+                fileCount: snapshotOrders[orderIndex].fileCount,
+                fileDisposed: snapshotOrders[orderIndex].fileDisposed,
+                validationResult: snapshotOrders[orderIndex].fileValidationResult,
+                flagReasonText: snapshotOrders[orderIndex].fileFlagReasonText,
+                fileChannel: snapshotOrders[orderIndex].fileChannel,
+                dateDisposed: snapshotOrders[orderIndex].dateDisposed
+            };
+        }
+    }
+    return null;
+}
+
+function mergeSnapshotFileFields(snapshotOrder) {
+    if (!snapshotOrder || typeof snapshotOrder.orderId !== "number") { return; }
+
+    var liveOrder = linkedListFindOrder(ordersList, snapshotOrder.orderId);
+    if (liveOrder === null) { return; }
+
+    if (snapshotOrder.fileName === null || snapshotOrder.fileName === undefined) {
+        liveOrder.fileName = null;
+        liveOrder.fileCount = 0;
+        liveOrder.fileChannel = liveOrder.fileChannel || null;
+        liveOrder.fileDisposed = false;
+        liveOrder.dateDisposed = null;
+        return;
+    }
+
+    liveOrder.fileName = snapshotOrder.fileName;
+    liveOrder.fileCount = isFiniteNumber(snapshotOrder.fileCount) ? snapshotOrder.fileCount : liveOrder.fileCount;
+    liveOrder.fileChannel = snapshotOrder.fileChannel !== undefined ? snapshotOrder.fileChannel : liveOrder.fileChannel;
+    liveOrder.fileDisposed = !!snapshotOrder.fileDisposed;
+    liveOrder.dateDisposed = snapshotOrder.dateDisposed !== undefined ? snapshotOrder.dateDisposed : liveOrder.dateDisposed;
+}
+
+function applySnapshotFileFields() {
+    var snapshotOrders = readSnapshotOrders();
+    var orderIndex;
+    if (!isArrayLike(snapshotOrders)) { return; }
+    for (orderIndex = 0; orderIndex < snapshotOrders.length; orderIndex = orderIndex + 1) {
+        mergeSnapshotFileFields(snapshotOrders[orderIndex]);
+    }
+}
+
+function addSampleTrackingOrders() {
+    if (ordersList.size > 0) { return; }
+    var sampleOrders = [
+        { orderId: 1042, customerId: 1001, customerName: "Juan Dela Cruz", subject: "Thesis printing", fileName: "thesis-final.pdf", fileChannel: "Customer Portal", fileCount: 1, notes: "Spiral bind after printing.", fileDisposed: false, dateDisposed: null, serviceType: "Document Printing", serviceOption: "Spiral Binding", paperSize: "A4", pages: 85, copies: 2, colorTier: "Black Text", isRush: true, queueType: "advance", priorityLevel: "high", pricePerPage: 3, baseTotalPrice: 510, promoId: null, discountAmount: 0, totalPrice: 510, requiresDownPayment: true, downPaymentAmount: 255, paymentMethod: "GCash", paymentStatus: "downPaymentPaid", proofOfPaymentFile: "payment-1042.jpg", status: ORDER_STATUS.PRINTING, dateAdded: "2026-09-28T13:20:00", dateCompleted: null, unclaimedReason: "", daysUnclaimed: 0 },
+        { orderId: 1038, customerId: 1001, customerName: "Juan Dela Cruz", subject: "Assignment 4", fileName: "assignment-4.pdf", fileChannel: "Customer Portal", fileCount: 1, notes: "", fileDisposed: true, dateDisposed: "2026-09-27T18:05:00", serviceType: "Document Printing", serviceOption: "None", paperSize: "Short", pages: 12, copies: 1, colorTier: "Minimal Color", isRush: false, queueType: "walkIn", priorityLevel: "low", pricePerPage: 5, baseTotalPrice: 60, promoId: null, discountAmount: 0, totalPrice: 60, requiresDownPayment: false, downPaymentAmount: 0, paymentMethod: "Cash", paymentStatus: "fullyPaid", proofOfPaymentFile: "", status: ORDER_STATUS.DONE, dateAdded: "2026-09-27T14:10:00", dateCompleted: "2026-09-27T18:00:00", unclaimedReason: "", daysUnclaimed: 0 },
+        { orderId: 1029, customerId: 1001, customerName: "Juan Dela Cruz", subject: "Research paper", fileName: "research-paper.pdf", fileChannel: "Messenger", fileCount: 2, notes: "Print double-sided.", fileDisposed: true, dateDisposed: "2026-09-25T17:20:00", serviceType: "Document Printing", serviceOption: "Lamination", paperSize: "Long", pages: 25, copies: 1, colorTier: "Small Image", isRush: false, queueType: "walkIn", priorityLevel: "low", pricePerPage: 10, baseTotalPrice: 250, promoId: null, discountAmount: 0, totalPrice: 250, requiresDownPayment: false, downPaymentAmount: 0, paymentMethod: "Cash", paymentStatus: "fullyPaid", proofOfPaymentFile: "", status: ORDER_STATUS.UNCLAIMED, dateAdded: "2026-09-25T10:15:00", dateCompleted: "2026-09-25T15:30:00", unclaimedReason: "Customer did not show up", daysUnclaimed: 3 },
+        { orderId: 1017, customerId: 1001, customerName: "Juan Dela Cruz", subject: "Class handouts", fileName: "class-handouts.pdf", fileChannel: "Email", fileCount: 3, notes: "", fileDisposed: false, dateDisposed: null, serviceType: "Document Printing", serviceOption: "None", paperSize: "A4", pages: 20, copies: 3, colorTier: "Black Text", isRush: false, queueType: "walkIn", priorityLevel: "low", pricePerPage: 3, baseTotalPrice: 180, promoId: null, discountAmount: 0, totalPrice: 180, requiresDownPayment: false, downPaymentAmount: 0, paymentMethod: "Cash", paymentStatus: "pending", proofOfPaymentFile: "", status: ORDER_STATUS.CANCELLED, dateAdded: "2026-09-20T09:40:00", dateCompleted: null, unclaimedReason: "Cancelled by customer", daysUnclaimed: 0 },
+        { orderId: 1044, customerId: 1001, customerName: "Juan Dela Cruz", subject: "Report", fileName: "report.pdf", fileChannel: "Customer Portal", fileCount: 1, notes: "Please print as soon as possible.", fileDisposed: false, dateDisposed: null, serviceType: "Document Printing", serviceOption: "None", paperSize: "A4", pages: 10, copies: 1, colorTier: "Full Color", isRush: false, queueType: "walkIn", priorityLevel: "medium", pricePerPage: 20, baseTotalPrice: 200, promoId: null, discountAmount: 0, totalPrice: 200, requiresDownPayment: false, downPaymentAmount: 0, paymentMethod: "Cash", paymentStatus: "pending", proofOfPaymentFile: "", status: ORDER_STATUS.QUEUED, dateAdded: "2026-09-28T16:40:00", dateCompleted: null, unclaimedReason: "", daysUnclaimed: 0 }
+    ];
+    var sampleIndex;
+    for (sampleIndex = 0; sampleIndex < sampleOrders.length; sampleIndex = sampleIndex + 1) {
+        linkedListInsertAtHead(ordersList, sampleOrders[sampleIndex]);
+        if (sampleOrders[sampleIndex].status === ORDER_STATUS.QUEUED) {
+            queueEnqueue(getLaneQueue(sampleOrders[sampleIndex].queueType), sampleOrders[sampleIndex]);
+        }
+        if (sampleOrders[sampleIndex].orderId >= nextOrderId) { nextOrderId = sampleOrders[sampleIndex].orderId + 1; }
+    }
+}
+
+window.addEventListener("storage", function (storageEvent) {
+    if (storageEvent.key === ORDERS_SNAPSHOT_KEY) {
+        applySnapshotFileFields();
+        renderAll();
+    }
+    if (storageEvent.key === INVENTORY_SNAPSHOT_KEY) {
+        renderStats();
+        if (!orderModal.hidden) {
+            refreshPaperSizeAvailability();
+            orderError.textContent = getPaperWarningText();
+        }
+    }
+});
+
+window.addEventListener("gsj:file-updated", function (fileEvent) {
+    var fileRecord = fileEvent && fileEvent.detail ? fileEvent.detail : null;
+    if (!fileRecord || typeof fileRecord.orderId !== "number") { return; }
+    mergeSnapshotFileFields(fileRecord);
+    renderAll();
+});
+
+
+/* ==========================================================================
+   15. START
+   ========================================================================== */
+populateSelect(serviceTypeInput, SERVICE_TYPES);
+populateSelect(colorTierInput, COLOR_TIERS);
+populateSelect(fileChannelInput, ORDER_CHANNELS);
+
+restoreSavedState();
+if (ordersList.size === 0) { addSampleTrackingOrders(); }
+renderAll();
+</script>
+</body>
+</html>

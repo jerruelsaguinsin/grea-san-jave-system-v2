@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expense Management — Grea San Jave</title>
+  <link rel="stylesheet" href="anika.css">
+</head>
+<body>
+<main style="margin-left:0">
+<!--
+GREA SAN JAVE — MODULE 9 — EXPENSE MANAGEMENT 
+-->
+<section id="section-expenses">
+  <h1 class="page-title">Expense Management</h1>
+  <p class="page-subtitle">Record business expenses using the signed-in account. Totals are VAT-inclusive and records are archived instead of deleted.</p>
+
+  <div class="card">
+    <h2 class="card-title">Log an Expense</h2>
+    <form id="exForm" novalidate>
+      <div class="form-row">
+        <div class="form-group"><label for="exCategory">Category</label><select id="exCategory"><option value="Rent">Rent</option><option value="Utilities">Utilities</option><option value="Supplies">Supplies</option><option value="Equipment Repair">Equipment Repair</option><option value="Other">Other</option></select></div>
+        <div class="form-group"><label for="exAmount">Total amount paid (₱)</label><input id="exAmount" type="number" min="0.01" step="0.01" required><div class="field-hint">VAT is already included in this amount.</div></div>
+        <div class="form-group"><label for="exDate">Date</label><input id="exDate" type="date" required></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Recorded by</label><div class="readonly-box" id="exRecordedByName">—</div></div>
+        <div class="form-group"><label for="exDescription">Description</label><input id="exDescription" type="text" placeholder="e.g. Printer ink refill" required></div>
+      </div>
+      <div class="field-hint">VAT portion of a VAT-inclusive total is calculated as total × 12 / 112. VAT is not added on top.</div>
+      <div id="exMessage" class="field-message"></div>
+      <button class="btn btn-primary" type="submit">Record expense</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2 class="card-title">Active Expense Records</h2>
+    <div class="table-wrap">
+      <table class="compact-table">
+        <thead><tr><th>ID</th><th>Date</th><th>Category</th><th>Description</th><th>Total paid</th><th>Recorded by</th><th>Action</th></tr></thead>
+        <tbody id="exTableBody"></tbody>
+      </table>
+    </div>
+    <div class="section-actions"><strong>Grand total: <span id="exGrandTotal">₱0.00</span></strong><span class="field-hint">Active records: <span id="exActiveCount">0</span></span></div>
+  </div>
+
+  <details class="card dev-tools no-print">
+    <summary>Module 9 demo tools — remove before owner handover</summary>
+    <div class="section-actions"><button class="btn btn-secondary btn-small" type="button" onclick="ExpensesModule.demoLoad()">Load demo expenses</button><button class="btn btn-secondary btn-small" type="button" onclick="ExpensesModule.archiveAll()">Archive active expenses</button></div>
+  </details>
+</section>
+<script src="module9.js"></script>
+</main>
+</body>
+</html>

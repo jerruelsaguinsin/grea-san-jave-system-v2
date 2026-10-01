@@ -91,6 +91,11 @@
   <section id="myOrdersSection" class="tracking-view" hidden>
     <h1 class="dashboard-welcome">My Orders</h1>
 
+    <div class="form-group">
+      <label for="myOrdersSearch">Search orders</label>
+      <input id="myOrdersSearch" type="search" placeholder="Order ID, subject, file, service..." autocomplete="off">
+    </div>
+
     <nav class="order-tracking-tabs" aria-label="Order status filters">
       <button type="button" class="order-tracking-tab active" data-order-tab="all">All <span id="trackingCountAll">0</span></button>
       <button type="button" class="order-tracking-tab" data-order-tab="processing">Processing <span id="trackingCountProcessing">0</span></button>

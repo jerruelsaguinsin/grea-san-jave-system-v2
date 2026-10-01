@@ -296,6 +296,26 @@ function trackingTabMatches(order, tab) {
   return false;
 }
 
+function trackingSearchMatches(order, query) {
+  if (query === "") return true;
+  let searchableValues = [
+    order.orderId,
+    order.subject,
+    order.fileName,
+    order.serviceType,
+    trackingStatusLabel(order.status),
+    order.colorTier,
+    order.notes,
+  ];
+  for (let i = 0; i < searchableValues.length; i++) {
+    let value = searchableValues[i];
+    if (value !== null && value !== undefined && String(value).toLowerCase().indexOf(query) !== -1) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function trackingProgressMarkup(order) {
   if (order.status === ORDER_STATUS.CANCELLED) return "";
 
@@ -326,6 +346,8 @@ function renderMyOrders() {
   let container = document.getElementById("myOrdersList");
   if (!container) return;
 
+  let searchInput = document.getElementById("myOrdersSearch");
+  let searchQuery = searchInput ? searchInput.value.trim().toLowerCase() : "";
   let orders = getMyMockOrders();
   let counts = { all: 0, processing: 0, ready: 0, completed: 0, cancelled: 0 };
   for (let i = 0; i < orders.length; i++) {
@@ -348,6 +370,7 @@ function renderMyOrders() {
   for (let i = 0; i < orders.length; i++) {
     let order = orders[i];
     if (!trackingTabMatches(order, currentTrackingTab)) continue;
+    if (!trackingSearchMatches(order, searchQuery)) continue;
     visibleCount++;
 
     let orderId = escapeHtmlDash(order.orderId);
@@ -392,9 +415,11 @@ function renderMyOrders() {
   }
 
   if (visibleCount === 0) {
-    let emptyText = currentTrackingTab === "all"
-      ? "Your placed orders will appear here."
-      : "There are no orders in this status.";
+    let emptyText = searchQuery !== ""
+      ? "Try a different order ID, subject, file, or service."
+      : currentTrackingTab === "all"
+        ? "Your placed orders will appear here."
+        : "There are no orders in this status.";
     markup = '<div class="tracking-empty"><strong>No orders found</strong><span>' + emptyText + '</span></div>';
   }
   container.innerHTML = markup;
@@ -698,6 +723,11 @@ function initCustomerDashboard() {
       }
       renderMyOrders();
     });
+  }
+
+  let myOrdersSearch = document.getElementById("myOrdersSearch");
+  if (myOrdersSearch) {
+    myOrdersSearch.addEventListener("input", renderMyOrders);
   }
 
   document.getElementById("myOrdersList").addEventListener("click", function (event) {

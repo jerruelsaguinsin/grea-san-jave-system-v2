@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales Reporting — Grea San Jave</title>
+  <link rel="stylesheet" href="anika.css">
+</head>
+<body>
+<main style="margin-left:0">
+<!-- ================= MODULE 8 ================= -->
+  <section id="section-sales">
+  <h1 class="page-title">Sales Reporting</h1>
+  <p class="page-subtitle">Gross sales come from completed orders. Cash revenue comes from confirmed payments. Expenses are subtracted from cash revenue.</p>
+
+  <div class="card no-print">
+    <h2 class="card-title">Report settings</h2>
+    <div class="toolbar report-toolbar">
+      <div class="form-group"><label for="srPeriod">Period</label><select id="srPeriod"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></div>
+      <div class="form-group"><label for="srFrom">From</label><input id="srFrom" type="date"></div>
+      <div class="form-group"><label for="srTo">To</label><input id="srTo" type="date"></div>
+      <div class="form-group"><button class="btn btn-primary" id="btnSrGenerate" type="button">Generate report</button></div>
+      <div class="form-group"><button class="btn btn-secondary" id="btnSrPrint" type="button">Print sales report</button></div>
+    </div>
+  </div>
+
+  <div class="card report-paper" id="salesReportPrintArea">
+    <div class="report-header">
+      <img alt="Grea San Jave logo" src="../grea-san-jave/grea_logo.jpg">
+      <div><h2>Grea San Jave</h2><p>Sales &amp; Expense Report</p><p id="srPrintRange">Report period: —</p></div>
+    </div>
+    <p class="report-tax-note">VAT is included in recorded totals; it is not added on top.</p>
+
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value" id="srCompleted">0</div><div class="stat-label">Completed orders</div></div>
+      <div class="stat-card"><div class="stat-value" id="srRush">0</div><div class="stat-label">Rush orders</div></div>
+      <div class="stat-card"><div class="stat-value" id="srGross">₱0.00</div><div class="stat-label">Gross sales</div></div>
+      <div class="stat-card"><div class="stat-value" id="srCash">₱0.00</div><div class="stat-label">Cash revenue</div></div>
+      <div class="stat-card"><div class="stat-value" id="srExpenses">₱0.00</div><div class="stat-label">Expenses</div></div>
+      <div class="stat-card"><div class="stat-value" id="srNet">₱0.00</div><div class="stat-label">Net cash</div></div>
+    </div>
+
+    <div class="chart-grid no-print">
+      <div class="card chart-box"><h2 class="card-title">Gross Sales vs Expenses</h2><div id="srRevenueChart" class="chart-wrap"></div><div class="chart-legend"><span>Gross sales</span><span>Expenses</span></div></div>
+      <div class="card chart-box"><h2 class="card-title">Completed vs Rush Orders</h2><div id="srOrdersChart" class="chart-wrap"></div><div class="chart-legend"><span>Completed</span><span>Rush</span></div></div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="compact-table report-table">
+        <thead><tr><th>Period</th><th>Orders</th><th>Rush</th><th>Gross sales</th><th>Cash revenue</th><th>Expenses</th><th>Net cash</th></tr></thead>
+        <tbody id="srTableBody"></tbody>
+      </table>
+    </div>
+    <div class="print-only">
+      <p>Completed orders: <span id="srPrintOrders">0</span></p>
+      <p>Rush orders: <span id="srPrintRush">0</span></p>
+      <p>Gross sales: <span id="srPrintGross">₱0.00</span></p>
+      <p>Cash revenue: <span id="srPrintCash">₱0.00</span></p>
+      <p>Expenses: <span id="srPrintExpenses">₱0.00</span></p>
+      <p>Net cash: <span id="srPrintNet">₱0.00</span></p>
+    </div>
+  </div>
+
+  <details class="card dev-tools no-print">
+    <summary>Module 8 demo tools — remove before owner handover</summary>
+    <div class="section-actions"><button class="btn btn-secondary btn-small" type="button" onclick="SalesModule.refresh()">Refresh report</button></div>
+  </details>
+</section>
+<script src="module7.js"></script>
+<script src="module9.js"></script>
+<script src="module8.js"></script>
+</main>
+</body>
+</html>

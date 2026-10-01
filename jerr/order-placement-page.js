@@ -332,8 +332,14 @@ function handleOrderFilesChange(event) {
   let picked = event.target.files;
   let rejectedFiles = 0;
   for (let i = 0; i < picked.length; i++) {
-    let fileName = picked[i].name.toLowerCase();
-    if (picked[i].type === "application/pdf" || fileName.slice(-4) === ".pdf") {
+    let fileName = picked[i].name;
+    let extensionStart = fileName.length - 4;
+    let hasPdfExtension = extensionStart >= 0 &&
+      fileName[extensionStart] === "." &&
+      (fileName[extensionStart + 1] === "p" || fileName[extensionStart + 1] === "P") &&
+      (fileName[extensionStart + 2] === "d" || fileName[extensionStart + 2] === "D") &&
+      (fileName[extensionStart + 3] === "f" || fileName[extensionStart + 3] === "F");
+    if (picked[i].type === "application/pdf" || hasPdfExtension) {
       placementFiles[placementFiles.length] = picked[i];
     } else {
       rejectedFiles++;

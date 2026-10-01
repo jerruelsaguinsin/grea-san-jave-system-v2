@@ -1,0 +1,2097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Inventory Management — Module 6</title>
+<link rel="stylesheet" href="anika.css">
+</head>
+<body>
+<main>
+    <h1 class="page-title"> Inventory Management</h1>
+
+    <section class="stat-grid" id="material-category-cards" aria-label="Available materials by category"></section>
+
+    <section class="card">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+            <h3 style="margin:0;">Stock levels</h3>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <input type="search" id="search-input" class="input search-input" placeholder="Search items..." autocomplete="off" style="padding:6px 10px; flex-grow:1;">
+                <select id="category-filter" class="input" style="padding:6px 10px;"></select>
+                <button type="button" class="btn btn-secondary" id="usage-btn" style="white-space:nowrap;">Record usage</button>
+                <button type="button" class="btn btn-primary" id="add-btn" style="white-space:nowrap;">Add item</button>
+            </div>
+        </div>
+        <hr style="width:100%; margin:12px 0; border:none; border-top:1px solid #e5e5e5;">
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Item ID</th>
+                        <th scope="col">Item</th>
+                        <th scope="col">Category</th>
+                        <th scope="col">On hand</th>
+                        <th scope="col">Reorder at</th>
+                        <th scope="col">Cost per unit</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="item-table-body"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="card">
+        <h3 style="margin:0;">Material usage per order</h3>
+        <hr style="width:100%; margin:12px 0; border:none; border-top:1px solid #e5e5e5;">
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Date</th>
+                        <th scope="col">Order</th>
+                        <th scope="col">Item</th>
+                        <th scope="col">Quantity used</th>
+                        <th scope="col">Material cost</th>
+                    </tr>
+                </thead>
+                <tbody id="usage-table-body"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="card">
+        <h3 style="margin:0;">Order costing</h3>
+        <hr style="width:100%; margin:12px 0; border:none; border-top:1px solid #e5e5e5;">
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Order</th>
+                        <th scope="col">Customer</th>
+                        <th scope="col">Materials cost</th>
+                        <th scope="col">Order total</th>
+                        <th scope="col">Margin</th>
+                    </tr>
+                </thead>
+                <tbody id="costing-table-body"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="card">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+            <h3 style="margin:0;">Alerts</h3>
+            <button type="button" class="btn btn-danger btn-small" id="reset-btn">Clear data</button>
+        </div>
+        <hr style="width:100%; margin:12px 0; border:none; border-top:1px solid #e5e5e5;">
+        <ul class="activity-feed" id="notification-list" style="padding-left:0;"></ul>
+    </section>
+
+    <section class="card">
+        <h3 style="margin:0;">Inventory history</h3>
+        <hr style="width:100%; margin:12px 0; border:none; border-top:1px solid #e5e5e5;">
+        <ul class="activity-feed" id="audit-list" style="padding-left:0;"></ul>
+    </section>
+</main>
+
+<div class="modal-overlay" id="item-modal" role="dialog" aria-modal="true" aria-labelledby="item-modal-title" hidden>
+    <div class="modal-box">
+        <div class="modal-head" style="display:flex; align-items:center; justify-content:space-between;">
+            <h3 id="item-modal-title">Add item</h3>
+            <button type="button" class="icon-btn" id="item-modal-close" aria-label="Close">&#215;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="itemCategory">Category</label>
+                    <select id="itemCategory" class="input"></select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="itemMaterialType">Material type / size</label>
+                    <select id="itemMaterialType" class="input"></select>
+                </div>
+                <div class="form-group" id="itemOtherTypeGroup" hidden>
+                    <label for="itemOtherType">Specify other material</label>
+                    <input type="text" id="itemOtherType" class="input" placeholder="Specify material or size" autocomplete="off">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="itemUnit">Unit</label>
+                    <select id="itemPaperUnit" class="input" hidden>
+                        <option value="ream">ream</option>
+                        <option value="pcs">pcs</option>
+                    </select>
+                    <input type="text" id="itemUnit" class="input" placeholder="e.g. bottle, piece" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="itemQuantity" id="itemQuantityLabel">Quantity on hand</label>
+                    <input type="number" id="itemQuantity" class="input" min="0" step="1">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="itemThreshold">Reorder threshold</label>
+                    <input type="number" id="itemThreshold" class="input" min="0" step="1">
+                </div>
+                <div class="form-group">
+                    <label for="itemCost">Cost per unit (₱)</label>
+                    <input type="number" id="itemCost" class="input" min="0" step="0.01">
+                </div>
+            </div>
+            <p class="field-hint">A low-stock alert fires when the quantity drops to the reorder threshold or below. One ream = 500 pcs.</p>
+            <p class="field-error" id="item-error" role="alert"></p>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="item-cancel-btn">Cancel</button>
+                <button type="button" class="btn btn-primary" id="item-save-btn">Save item</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="restock-modal" role="dialog" aria-modal="true" aria-labelledby="restock-modal-title" hidden>
+    <div class="modal-box">
+        <div class="modal-head" style="display:flex; align-items:center; justify-content:space-between;">
+            <h3 id="restock-modal-title">Restock item</h3>
+            <button type="button" class="icon-btn" id="restock-modal-close" aria-label="Close">&#215;</button>
+        </div>
+        <div class="modal-body">
+            <p id="restock-item-label"></p>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="restockQuantity">Quantity received</label>
+                    <input type="number" id="restockQuantity" class="input" min="1" step="1" value="1">
+                </div>
+            </div>
+            <p class="field-error" id="restock-error" role="alert"></p>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="restock-cancel-btn">Cancel</button>
+                <button type="button" class="btn btn-primary" id="restock-save-btn">Add to stock</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="usage-modal" role="dialog" aria-modal="true" aria-labelledby="usage-modal-title" hidden>
+    <div class="modal-box">
+        <div class="modal-head" style="display:flex; align-items:center; justify-content:space-between;">
+            <h3 id="usage-modal-title">Record material usage</h3>
+            <button type="button" class="icon-btn" id="usage-modal-close" aria-label="Close">&#215;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="usageOrder">Completed order</label>
+                    <select id="usageOrder" class="input"></select>
+                </div>
+                <div class="form-group">
+                    <label for="usageItem">Material</label>
+                    <select id="usageItem" class="input"></select>
+                </div>
+                <div class="form-group">
+                    <label for="usageQuantity">Quantity used</label>
+                    <input type="number" id="usageQuantity" class="input" min="1" step="1" value="1">
+                </div>
+            </div>
+            <p>Available: <span id="usage-available">0</span></p>
+            <p><strong>Material cost: <span id="usage-cost-preview">₱0</span></strong></p>
+            <p class="field-error" id="usage-error" role="alert"></p>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="usage-cancel-btn">Cancel</button>
+                <button type="button" class="btn btn-primary" id="usage-save-btn">Deduct from stock</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toastContainer" aria-live="polite"></div>
+
+<script>
+/* ==========================================================================
+   HAND-CODED HELPERS - plain loops and index assignment only.
+   No array methods, no string-method shortcuts, no Math, no JSON, no Number.is*.
+   (Renamed per SCHEMA_AND_MODULE_MAP.md naming rules: camelCase functions and
+   variables, UPPER_SNAKE_CASE constants, descriptive names, no abbreviations.)
+   ========================================================================== */
+//  The value for 'not a number' (0 divided by 0 gives NaN)
+var NOT_A_NUMBER = 0 / 0;
+//  All capital letters, used to change letter case
+var UPPERCASE_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+//  All small letters, used to change letter case
+var LOWERCASE_LETTERS = "abcdefghijklmnopqrstuvwxyz";
+//  Short month names, used when showing dates
+var MONTH_ABBREVIATIONS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+//  Checks if one character is a space, tab, or new line
+function isSpaceCharacter(characterText) {
+    return characterText === " " || characterText === "\t" || characterText === "\n" ||
+        characterText === "\r" || characterText === "\f" || characterText === "\v";
+}
+
+//  Copies the letters from the start position up to (not including) the end position
+function copySubstring(sourceText, startIndex, endIndex) {
+    var resultText = "";
+    var charIndex;
+    for (charIndex = startIndex; charIndex < endIndex && charIndex < sourceText.length; charIndex = charIndex + 1) {
+        resultText = resultText + sourceText[charIndex];
+    }
+    return resultText;
+}
+
+//  Removes spaces from the start and end of a text
+function trimWhitespace(rawValue) {
+    var sourceText = String(rawValue);
+    var startIndex = 0;
+    var endIndex = sourceText.length;
+    while (startIndex < endIndex && isSpaceCharacter(sourceText[startIndex])) { startIndex = startIndex + 1; }
+    while (endIndex > startIndex && isSpaceCharacter(sourceText[endIndex - 1])) { endIndex = endIndex - 1; }
+    return copySubstring(sourceText, startIndex, endIndex);
+}
+
+//  Changes letters using two lists (from-letters and to-letters), one letter at a time
+function convertLetterCase(rawValue, fromLetters, toLetters) {
+    var sourceText = String(rawValue);
+    var resultText = "";
+    var textIndex;
+    var letterIndex;
+    var wasConverted;
+    for (textIndex = 0; textIndex < sourceText.length; textIndex = textIndex + 1) {
+        wasConverted = false;
+        for (letterIndex = 0; letterIndex < 26; letterIndex = letterIndex + 1) {
+            if (sourceText[textIndex] === fromLetters[letterIndex]) {
+                resultText = resultText + toLetters[letterIndex];
+                wasConverted = true;
+                break;
+            }
+        }
+        if (!wasConverted) { resultText = resultText + sourceText[textIndex]; }
+    }
+    return resultText;
+}
+//  Changes all capital letters to small letters
+function toLowerCaseText(rawValue) { return convertLetterCase(rawValue, UPPERCASE_LETTERS, LOWERCASE_LETTERS); }
+//  Changes all small letters to capital letters
+function toUpperCaseText(rawValue) { return convertLetterCase(rawValue, LOWERCASE_LETTERS, UPPERCASE_LETTERS); }
+
+//  Checks if a text contains another text (returns true or false)
+function textIncludes(sourceValue, targetValue) {
+    var sourceText = String(sourceValue);
+    var targetText = String(targetValue);
+    var startIndex;
+    var offsetIndex;
+    var isMatch;
+    if (targetText === "") { return true; }
+    for (startIndex = 0; startIndex + targetText.length <= sourceText.length; startIndex = startIndex + 1) {
+        isMatch = true;
+        for (offsetIndex = 0; offsetIndex < targetText.length; offsetIndex = offsetIndex + 1) {
+            if (sourceText[startIndex + offsetIndex] !== targetText[offsetIndex]) { isMatch = false; break; }
+        }
+        if (isMatch) { return true; }
+    }
+    return false;
+}
+
+/* ---- type checks and math ---- */
+//  Checks if a value is an array (has a length number)
+function isArrayLike(value) { return value !== null && typeof value === "object" && typeof value.length === "number"; }
+//  Checks if a value is a real number (not NaN and not Infinity)
+function isFiniteNumber(numberValue) {
+    return typeof numberValue === "number" && numberValue === numberValue &&
+        numberValue !== 1 / 0 && numberValue !== -1 / 0;
+}
+//  Checks if a number has no decimal part
+function isWholeNumber(numberValue) { return isFiniteNumber(numberValue) && numberValue % 1 === 0; }
+//  Rounds a number down (3.9 becomes 3, -3.1 becomes -4)
+function floorNumber(numberValue) {
+    var truncatedValue = numberValue - (numberValue % 1);
+    if (numberValue < 0 && truncatedValue !== numberValue) { truncatedValue = truncatedValue - 1; }
+    return truncatedValue;
+}
+//  Rounds a number to the nearest whole number
+function roundNumber(numberValue) { return floorNumber(numberValue + 0.5); }
+//  Returns the bigger of two numbers
+function maxNumber(firstNumber, secondNumber) { return firstNumber > secondNumber ? firstNumber : secondNumber; }
+
+/* ---- class tokens ---- */
+//  Checks if an element already has a CSS class name
+function hasClassToken(element, targetClass) {
+    var classText = element.className;
+    var tokenText = "";
+    var charIndex;
+    for (charIndex = 0; charIndex <= classText.length; charIndex = charIndex + 1) {
+        if (charIndex === classText.length || isSpaceCharacter(classText[charIndex])) {
+            if (tokenText === targetClass) { return true; }
+            tokenText = "";
+        } else { tokenText = tokenText + classText[charIndex]; }
+    }
+    return false;
+}
+//  Adds a CSS class name to an element (only if it is not there yet)
+function addClassToken(element, newClass) {
+    if (hasClassToken(element, newClass)) { return; }
+    if (element.className !== "") { element.className = element.className + " "; }
+    element.className = element.className + newClass;
+}
+//  Removes a CSS class name from an element
+function removeClassToken(element, targetClass) {
+    var classText = element.className;
+    var resultText = "";
+    var tokenText = "";
+    var charIndex;
+    for (charIndex = 0; charIndex <= classText.length; charIndex = charIndex + 1) {
+        if (charIndex === classText.length || isSpaceCharacter(classText[charIndex])) {
+            if (tokenText !== "" && tokenText !== targetClass) {
+                if (resultText !== "") { resultText = resultText + " "; }
+                resultText = resultText + tokenText;
+            }
+            tokenText = "";
+        } else { tokenText = tokenText + classText[charIndex]; }
+    }
+    element.className = resultText;
+}
+//  Checks if the chosen option in a dropdown is disabled
+function isSelectedOptionDisabled(selectElement) {
+    return selectElement.selectedIndex >= 0 && selectElement.options[selectElement.selectedIndex].disabled;
+}
+
+/* ---- JSON (hand-written writer and reader) ---- */
+//  Puts quotes around a text and escapes special characters, so it is safe for JSON
+function quoteJsonString(sourceText) {
+    var quotedText = "\"";
+    var charIndex;
+    var currentChar;
+    for (charIndex = 0; charIndex < sourceText.length; charIndex = charIndex + 1) {
+        currentChar = sourceText[charIndex];
+        if (currentChar === "\"") { quotedText = quotedText + "\\\""; }
+        else if (currentChar === "\\") { quotedText = quotedText + "\\\\"; }
+        else if (currentChar === "\n") { quotedText = quotedText + "\\n"; }
+        else if (currentChar === "\r") { quotedText = quotedText + "\\r"; }
+        else if (currentChar === "\t") { quotedText = quotedText + "\\t"; }
+        else { quotedText = quotedText + currentChar; }
+    }
+    return quotedText + "\"";
+}
+//  Turns a value (text, number, array, or object) into JSON text
+function stringifyJson(value) {
+    var valueType = typeof value;
+    var jsonText;
+    var itemIndex;
+    var keyName;
+    var isFirstKey;
+    if (value === null || value === undefined || valueType === "function") { return "null"; }
+    if (valueType === "number") { return isFiniteNumber(value) ? String(value) : "null"; }
+    if (valueType === "boolean") { return value ? "true" : "false"; }
+    if (valueType === "string") { return quoteJsonString(value); }
+    if (isArrayLike(value)) {
+        jsonText = "[";
+        for (itemIndex = 0; itemIndex < value.length; itemIndex = itemIndex + 1) {
+            if (itemIndex > 0) { jsonText = jsonText + ","; }
+            jsonText = jsonText + stringifyJson(value[itemIndex]);
+        }
+        return jsonText + "]";
+    }
+    jsonText = "{";
+    isFirstKey = true;
+    for (keyName in value) {
+        if (value[keyName] === undefined || typeof value[keyName] === "function") { continue; }
+        if (!isFirstKey) { jsonText = jsonText + ","; }
+        isFirstKey = false;
+        jsonText = jsonText + quoteJsonString(keyName) + ":" + stringifyJson(value[keyName]);
+    }
+    return jsonText + "}";
+}
+
+// parserState = { sourceText: the JSON text, position: index of the next character to read }
+//  Moves the reading position forward past any spaces
+function skipJsonWhitespace(parserState) {
+    while (parserState.position < parserState.sourceText.length &&
+           isSpaceCharacter(parserState.sourceText[parserState.position])) {
+        parserState.position = parserState.position + 1;
+    }
+}
+//  Reads true, false, or null from the JSON text and returns its value
+function parseJsonKeyword(parserState, keywordText, keywordValue) {
+    var charIndex;
+    for (charIndex = 0; charIndex < keywordText.length; charIndex = charIndex + 1) {
+        if (parserState.sourceText[parserState.position + charIndex] !== keywordText[charIndex]) { throw "bad json"; }
+    }
+    parserState.position = parserState.position + keywordText.length;
+    return keywordValue;
+}
+//  Reads one quoted text from the JSON text and returns it
+function parseJsonString(parserState) {
+    var parsedText = "";
+    var currentChar;
+    var escapedChar;
+    if (parserState.sourceText[parserState.position] !== "\"") { throw "bad json"; }
+    parserState.position = parserState.position + 1;
+    while (parserState.position < parserState.sourceText.length &&
+           parserState.sourceText[parserState.position] !== "\"") {
+        currentChar = parserState.sourceText[parserState.position];
+        if (currentChar === "\\") {
+            parserState.position = parserState.position + 1;
+            escapedChar = parserState.sourceText[parserState.position];
+            if (escapedChar === "n") { parsedText = parsedText + "\n"; }
+            else if (escapedChar === "r") { parsedText = parsedText + "\r"; }
+            else if (escapedChar === "t") { parsedText = parsedText + "\t"; }
+            else if (escapedChar === "\"" || escapedChar === "\\" || escapedChar === "/") { parsedText = parsedText + escapedChar; }
+            else { throw "bad json"; }
+        } else { parsedText = parsedText + currentChar; }
+        parserState.position = parserState.position + 1;
+    }
+    parserState.position = parserState.position + 1;
+    return parsedText;
+}
+//  Reads any JSON value (object, array, text, keyword, or number) from the current position
+function parseJsonValue(parserState) {
+    var firstChar;
+    var parsedObject;
+    var parsedArray;
+    var keyName;
+    var itemCount;
+    var numberText;
+    skipJsonWhitespace(parserState);
+    firstChar = parserState.sourceText[parserState.position];
+    if (firstChar === "{") {
+        parsedObject = {};
+        parserState.position = parserState.position + 1;
+        skipJsonWhitespace(parserState);
+        if (parserState.sourceText[parserState.position] === "}") { parserState.position = parserState.position + 1; return parsedObject; }
+        while (true) {
+            skipJsonWhitespace(parserState);
+            keyName = parseJsonString(parserState);
+            skipJsonWhitespace(parserState);
+            if (parserState.sourceText[parserState.position] !== ":") { throw "bad json"; }
+            parserState.position = parserState.position + 1;
+            parsedObject[keyName] = parseJsonValue(parserState);
+            skipJsonWhitespace(parserState);
+            if (parserState.sourceText[parserState.position] === ",") { parserState.position = parserState.position + 1; }
+            else if (parserState.sourceText[parserState.position] === "}") { parserState.position = parserState.position + 1; return parsedObject; }
+            else { throw "bad json"; }
+        }
+    }
+    if (firstChar === "[") {
+        parsedArray = [];
+        itemCount = 0;
+        parserState.position = parserState.position + 1;
+        skipJsonWhitespace(parserState);
+        if (parserState.sourceText[parserState.position] === "]") { parserState.position = parserState.position + 1; return parsedArray; }
+        while (true) {
+            parsedArray[itemCount] = parseJsonValue(parserState);
+            itemCount = itemCount + 1;
+            skipJsonWhitespace(parserState);
+            if (parserState.sourceText[parserState.position] === ",") { parserState.position = parserState.position + 1; }
+            else if (parserState.sourceText[parserState.position] === "]") { parserState.position = parserState.position + 1; return parsedArray; }
+            else { throw "bad json"; }
+        }
+    }
+    if (firstChar === "\"") { return parseJsonString(parserState); }
+    if (firstChar === "t") { return parseJsonKeyword(parserState, "true", true); }
+    if (firstChar === "f") { return parseJsonKeyword(parserState, "false", false); }
+    if (firstChar === "n") { return parseJsonKeyword(parserState, "null", null); }
+    numberText = "";
+    while (parserState.position < parserState.sourceText.length &&
+           (parserState.sourceText[parserState.position] === "-" || parserState.sourceText[parserState.position] === "+" ||
+            parserState.sourceText[parserState.position] === "." || parserState.sourceText[parserState.position] === "e" ||
+            parserState.sourceText[parserState.position] === "E" ||
+            (parserState.sourceText[parserState.position] >= "0" && parserState.sourceText[parserState.position] <= "9"))) {
+        numberText = numberText + parserState.sourceText[parserState.position];
+        parserState.position = parserState.position + 1;
+    }
+    if (numberText === "") { throw "bad json"; }
+    return Number(numberText);
+}
+//  Turns JSON text back into a value. Throws an error if the text is not valid JSON
+function parseJson(jsonText) {
+    var parserState = { sourceText: String(jsonText), position: 0 };
+    var parsedValue = parseJsonValue(parserState);
+    skipJsonWhitespace(parserState);
+    if (parserState.position < parserState.sourceText.length) { throw "bad json"; }
+    return parsedValue;
+}
+
+/* ---- dates and money ---- */
+//  Adds a zero in front of a number that has one digit (5 becomes 05)
+function padTwoDigits(numberValue) { return numberValue < 10 ? "0" + numberValue : String(numberValue); }
+//  Turns a time in milliseconds into an ISO date text (uses today if no value is given)
+function millisecondsToIsoString(millisecondsValue) {
+    var dateObject;
+    var millisecondsPart;
+    if (millisecondsValue === undefined) { millisecondsValue = new Date().getTime(); }
+    dateObject = new Date(millisecondsValue);
+    millisecondsPart = dateObject.getUTCMilliseconds();
+    return dateObject.getUTCFullYear() + "-" + padTwoDigits(dateObject.getUTCMonth() + 1) + "-" +
+        padTwoDigits(dateObject.getUTCDate()) + "T" + padTwoDigits(dateObject.getUTCHours()) + ":" +
+        padTwoDigits(dateObject.getUTCMinutes()) + ":" + padTwoDigits(dateObject.getUTCSeconds()) + "." +
+        (millisecondsPart < 10 ? "00" + millisecondsPart : (millisecondsPart < 100 ? "0" + millisecondsPart : String(millisecondsPart))) + "Z";
+}
+//  Turns an ISO date text back into milliseconds. Returns NaN if the text is too short
+function isoStringToMilliseconds(isoText) {
+    var yearNumber;
+    var monthNumber;
+    var dayNumber;
+    var adjustedYear;
+    var eraNumber;
+    var yearOfEra;
+    var dayOfYear;
+    var dayOfEra;
+    var millisecondsPart = 0;
+    if (typeof isoText !== "string" || isoText.length < 19) { return NOT_A_NUMBER; }
+    yearNumber = Number(copySubstring(isoText, 0, 4));
+    monthNumber = Number(copySubstring(isoText, 5, 7));
+    dayNumber = Number(copySubstring(isoText, 8, 10));
+    if (isoText.length >= 23 && isoText[19] === ".") { millisecondsPart = Number(copySubstring(isoText, 20, 23)); }
+    adjustedYear = monthNumber <= 2 ? yearNumber - 1 : yearNumber;
+    eraNumber = floorNumber(adjustedYear / 400);
+    yearOfEra = adjustedYear - eraNumber * 400;
+    dayOfYear = floorNumber((153 * (monthNumber > 2 ? monthNumber - 3 : monthNumber + 9) + 2) / 5) + dayNumber - 1;
+    dayOfEra = yearOfEra * 365 + floorNumber(yearOfEra / 4) - floorNumber(yearOfEra / 100) + dayOfYear;
+    return (eraNumber * 146097 + dayOfEra - 719468) * 86400000 +
+        Number(copySubstring(isoText, 11, 13)) * 3600000 + Number(copySubstring(isoText, 14, 16)) * 60000 +
+        Number(copySubstring(isoText, 17, 19)) * 1000 + millisecondsPart;
+}
+//  Shows an ISO date as a friendly text, like Oct 1, 3:05 PM
+function formatTimestamp(isoText) {
+    var dateObject = new Date(isoStringToMilliseconds(isoText));
+    var hourNumber = dateObject.getHours();
+    var meridiemText = hourNumber >= 12 ? "PM" : "AM";
+    hourNumber = hourNumber % 12;
+    if (hourNumber === 0) { hourNumber = 12; }
+    return MONTH_ABBREVIATIONS[dateObject.getMonth()] + " " + dateObject.getDate() + ", " + hourNumber + ":" +
+        padTwoDigits(dateObject.getMinutes()) + " " + meridiemText;
+}
+//  Shows a number as pesos with commas, like ₱1,250.50
+function formatPeso(amountNumber) {
+    var isNegative = amountNumber < 0;
+    var totalCents;
+    var wholePesos;
+    var centsPart;
+    var digitsText;
+    var groupedText = "";
+    var digitIndex;
+    if (isNegative) { amountNumber = -amountNumber; }
+    totalCents = roundNumber(amountNumber * 100);
+    wholePesos = floorNumber(totalCents / 100);
+    centsPart = totalCents - wholePesos * 100;
+    digitsText = String(wholePesos);
+    for (digitIndex = 0; digitIndex < digitsText.length; digitIndex = digitIndex + 1) {
+        if (digitIndex > 0 && (digitsText.length - digitIndex) % 3 === 0) { groupedText = groupedText + ","; }
+        groupedText = groupedText + digitsText[digitIndex];
+    }
+    if (centsPart > 0) { groupedText = groupedText + "." + (centsPart % 10 === 0 ? String(centsPart / 10) : padTwoDigits(centsPart)); }
+    return (isNegative ? "-" : "") + "\u20B1" + groupedText;
+}
+
+
+/* --------------------------------------------------------------------------
+   1. SHARED CONSTANTS
+   -------------------------------------------------------------------------- */
+var INVENTORY_CATEGORIES = {
+    BOND_PAPER: "Bond Paper",
+    PHOTO_PAPER: "Photo Paper",
+    SPECIALTY_PAPER: "Specialty Paper",
+    INK_TONER: "Ink/Toner",
+    BINDING_MATERIALS: "Binding Materials",
+    LAMINATION_MATERIALS: "Lamination Materials"
+};
+
+var ORDER_STATUS = {
+    QUEUED: "queued",
+    PRINTING: "printing",
+    DONE: "done",
+    UNCLAIMED: "unclaimed",
+    CANCELLED: "cancelled"
+};
+
+var NOTIFICATION_TYPES = {
+    UNCLAIMED_ORDER: "UnclaimedOrder",
+    LOW_STOCK: "LowStock"
+};
+
+// Module 3 owns this. Add it to constants.js first, then copy it here.
+var ACTION_TYPES = {
+    INVENTORY_UPDATED: "InventoryUpdated"
+};
+
+var ALL_CATEGORIES_LABEL = "All categories";
+
+var CHANGE_LABELS = {
+    ITEM_ADDED: "Item added",
+    ITEM_EDITED: "Item edited",
+    ITEM_REMOVED: "Item removed",
+    RESTOCK: "Restock",
+    USAGE: "Usage"
+};
+
+var STOCK_STATES = { OK: "ok", LOW: "low", OUT: "out" };
+
+var STOCK_UNITS = { REAM: "ream", REAMS: "reams", PIECES: "pcs" };
+var MATERIAL_OTHER_OPTION = "Others";
+var RECIPIENT_TYPES = { STAFF: "Staff", CUSTOMER: "Customer", BOTH: "Both" };
+
+var TOAST_KINDS = { SUCCESS: "success", WARNING: "warning", ERROR: "error" };
+
+var INVENTORY_SNAPSHOT_KEY = "gsj_inventory_snapshot";
+var LOW_STOCK_HANDOFF_KEY  = "gsj_lowstock_handoff";
+// Customer Order Placement is the only order source for automatic stock use.
+
+var CUSTOMER_ORDERS_SNAPSHOT_KEY = "gsj_customer_orders_snapshot";
+var CUSTOMER_ORDER_SNAPSHOT_KEY = "gsj_customer_order_snapshot";
+
+
+/* --------------------------------------------------------------------------
+   2. DATA STRUCTURES (built by hand)
+   -------------------------------------------------------------------------- */
+function createLinkedList() { return { head: null, size: 0 }; }
+
+function linkedListInsertAtHead(listRef, itemValue) {
+    listRef.head = { value: itemValue, next: listRef.head };
+    listRef.size = listRef.size + 1;
+}
+
+function linkedListFindItem(listRef, targetItemId) {
+    var currentNode = listRef.head;
+    while (currentNode !== null) {
+        if (currentNode.value.itemId === targetItemId) { return currentNode.value; }
+        currentNode = currentNode.next;
+    }
+    return null;
+}
+
+function linkedListRemoveItem(listRef, targetItemId) {
+    var previousNode = null;
+    var currentNode = listRef.head;
+    while (currentNode !== null) {
+        if (currentNode.value.itemId === targetItemId) {
+            if (previousNode === null) { listRef.head = currentNode.next; }
+            else { previousNode.next = currentNode.next; }
+            listRef.size = listRef.size - 1;
+            return true;
+        }
+        previousNode = currentNode;
+        currentNode = currentNode.next;
+    }
+    return false;
+}
+
+// insertion sort on the linked list, by item name
+function sortItemsByName(listRef) {
+    var currentNode = listRef.head;
+    var sortedHead = null;
+    var nextNode;
+    var sortedNode;
+    var itemName;
+
+    while (currentNode !== null) {
+        nextNode = currentNode.next;
+        itemName = toLowerCaseText(String(currentNode.value.itemName));
+
+        if (sortedHead === null || itemName < toLowerCaseText(String(sortedHead.value.itemName))) {
+            currentNode.next = sortedHead;
+            sortedHead = currentNode;
+        } else {
+            sortedNode = sortedHead;
+            while (sortedNode.next !== null &&
+                   toLowerCaseText(String(sortedNode.next.value.itemName)) <= itemName) {
+                sortedNode = sortedNode.next;
+            }
+            currentNode.next = sortedNode.next;
+            sortedNode.next = currentNode;
+        }
+        currentNode = nextNode;
+    }
+    listRef.head = sortedHead;
+}
+
+/* ---- usage records, oldest first ---- */
+function createList() { return { head: null, tail: null, itemsCount: 0 }; }
+
+function listAppend(listRef, itemValue) {
+    var newNode = { value: itemValue, next: null };
+    if (listRef.head === null) {
+        listRef.head = newNode;
+        listRef.tail = newNode;
+    } else {
+        listRef.tail.next = newNode;
+        listRef.tail = newNode;
+    }
+    listRef.itemsCount = listRef.itemsCount + 1;
+}
+
+function listGet(listRef, positionIndex) {
+    var currentNode = listRef.head;
+    var currentIndex = 0;
+    while (currentNode !== null) {
+        if (currentIndex === positionIndex) { return currentNode.value; }
+        currentNode = currentNode.next;
+        currentIndex = currentIndex + 1;
+    }
+    return undefined;
+}
+
+function listSize(listRef) { return listRef.itemsCount; }
+
+/* ---- stack ---- */
+function createStack() { return { stackData: [], stackCount: 0 }; }
+
+function stackPush(stackRef, itemValue) {
+    stackRef.stackData[stackRef.stackCount] = itemValue;
+    stackRef.stackCount = stackRef.stackCount + 1;
+}
+
+function stackGetFromTop(stackRef, offsetFromTop) {
+    return stackRef.stackData[stackRef.stackCount - 1 - offsetFromTop];
+}
+
+/* ---- search helpers ---- */
+function textContains(sourceText, targetText) { return textIncludes(sourceText, targetText); }
+
+function arrayContainsValue(sourceArray, targetValue) {
+    var index;
+    for (index = 0; index < sourceArray.length; index = index + 1) {
+        if (sourceArray[index] === targetValue) { return true; }
+    }
+    return false;
+}
+
+
+/* --------------------------------------------------------------------------
+   3. STATE
+   -------------------------------------------------------------------------- */
+var itemsList = createLinkedList();
+var usageList = createList();
+var notificationsStack = createStack();
+var historyStack = createStack();
+
+var nextItemId = 1;
+var nextUsageId = 1;
+var nextNotificationId = 1;
+
+var editingItemId = null;
+var restockingItemId = null;
+var armedRemoveItemId = null;
+
+var lastFocusedElement = null;
+
+
+/* --------------------------------------------------------------------------
+   4. ELEMENT REFERENCES
+   -------------------------------------------------------------------------- */
+var itemTableBody      = document.getElementById("item-table-body");
+var usageTableBody     = document.getElementById("usage-table-body");
+var costingTableBody   = document.getElementById("costing-table-body");
+var notificationListElement = document.getElementById("notification-list");
+var historyListElement      = document.getElementById("audit-list");
+var toastHost          = document.getElementById("toastContainer");
+
+var searchInput        = document.getElementById("search-input");
+var categoryFilter     = document.getElementById("category-filter");
+
+var itemModal          = document.getElementById("item-modal");
+var itemModalTitle     = document.getElementById("item-modal-title");
+var itemCategoryInput  = document.getElementById("itemCategory");
+var itemMaterialTypeInput = document.getElementById("itemMaterialType");
+var itemOtherTypeInput = document.getElementById("itemOtherType");
+var itemOtherTypeGroup = document.getElementById("itemOtherTypeGroup");
+var itemUnitInput      = document.getElementById("itemUnit");
+var itemPaperUnitInput = document.getElementById("itemPaperUnit");
+var itemQuantityInput  = document.getElementById("itemQuantity");
+var itemQuantityLabel  = document.getElementById("itemQuantityLabel");
+var itemThresholdInput = document.getElementById("itemThreshold");
+var itemCostInput      = document.getElementById("itemCost");
+var itemError          = document.getElementById("item-error");
+
+var restockModal       = document.getElementById("restock-modal");
+var restockItemLabel   = document.getElementById("restock-item-label");
+var restockQuantityInput = document.getElementById("restockQuantity");
+var restockError       = document.getElementById("restock-error");
+
+var usageModal         = document.getElementById("usage-modal");
+var usageOrderInput    = document.getElementById("usageOrder");
+var usageItemInput     = document.getElementById("usageItem");
+var usageQuantityInput = document.getElementById("usageQuantity");
+var usageAvailable     = document.getElementById("usage-available");
+var usageCostPreview   = document.getElementById("usage-cost-preview");
+var usageError         = document.getElementById("usage-error");
+
+
+/* --------------------------------------------------------------------------
+   5. TEXT, NUMBER & TIME HELPERS
+   -------------------------------------------------------------------------- */
+function padLeft(rawValue, targetWidth) {
+    var textValue = String(rawValue);
+    while (textValue.length < targetWidth) { textValue = "0" + textValue; }
+    return textValue;
+}
+
+function formatItemId(itemIdNumber) { return "ITM-" + padLeft(itemIdNumber, 3); }
+function formatOrderId(orderIdNumber) { return "ORD-" + padLeft(orderIdNumber, 4); }
+function roundMoney(amountNumber) { return roundNumber(amountNumber * 100) / 100; }
+function getCurrentIsoDate() { return millisecondsToIsoString(); }
+
+function populateSelect(selectElement, valuesObject) {
+    var keyName;
+    for (keyName in valuesObject) {
+        var optionElement = document.createElement("option");
+        optionElement.value = valuesObject[keyName];
+        optionElement.textContent = valuesObject[keyName];
+        selectElement.appendChild(optionElement);
+    }
+}
+
+function getCategoryValues() {
+    var categoryValues = [];
+    var keyName;
+    for (keyName in INVENTORY_CATEGORIES) {
+        categoryValues[categoryValues.length] = INVENTORY_CATEGORIES[keyName];
+    }
+    return categoryValues;
+}
+
+var MATERIAL_TYPE_OPTIONS = {};
+MATERIAL_TYPE_OPTIONS[INVENTORY_CATEGORIES.BOND_PAPER]           = ["Legal", "Letter", "A4", MATERIAL_OTHER_OPTION];
+MATERIAL_TYPE_OPTIONS[INVENTORY_CATEGORIES.PHOTO_PAPER]          = ["Glossy", "Matte", "A4", "4R", MATERIAL_OTHER_OPTION];
+MATERIAL_TYPE_OPTIONS[INVENTORY_CATEGORIES.SPECIALTY_PAPER]      = ["Cardstock", "Sticker paper", "Tracing paper", MATERIAL_OTHER_OPTION];
+MATERIAL_TYPE_OPTIONS[INVENTORY_CATEGORIES.INK_TONER]            = ["Ink bottle", "Ink cartridge", "Toner cartridge", MATERIAL_OTHER_OPTION];
+MATERIAL_TYPE_OPTIONS[INVENTORY_CATEGORIES.BINDING_MATERIALS]    = ["Binding comb", "Spiral coil", "Cover", MATERIAL_OTHER_OPTION];
+MATERIAL_TYPE_OPTIONS[INVENTORY_CATEGORIES.LAMINATION_MATERIALS] = ["Lamination pouch", "Lamination roll", MATERIAL_OTHER_OPTION];
+
+var PIECES_PER_REAM = 500;
+
+function isPaperCategory(categoryText) {
+    return categoryText === INVENTORY_CATEGORIES.BOND_PAPER ||
+        categoryText === INVENTORY_CATEGORIES.PHOTO_PAPER ||
+        categoryText === INVENTORY_CATEGORIES.SPECIALTY_PAPER;
+}
+
+function normalizeInventoryUnit(unitText) { return toLowerCaseText(trimWhitespace(String(unitText || ""))); }
+
+function isReamUnit(unitText) {
+    var normalizedUnit = normalizeInventoryUnit(unitText);
+    return normalizedUnit === STOCK_UNITS.REAM || normalizedUnit === STOCK_UNITS.REAMS;
+}
+
+function getPiecesPerUnit(unitText) { return isReamUnit(unitText) ? PIECES_PER_REAM : 1; }
+
+function updateUnitControl(unitText) {
+    var paperCategory = isPaperCategory(itemCategoryInput.value);
+    itemPaperUnitInput.hidden = !paperCategory;
+    itemUnitInput.hidden = paperCategory;
+    if (paperCategory) {
+        itemPaperUnitInput.value = normalizeInventoryUnit(unitText) === STOCK_UNITS.PIECES ? STOCK_UNITS.PIECES : STOCK_UNITS.REAM;
+    } else if (unitText !== undefined) {
+        itemUnitInput.value = unitText;
+    }
+}
+
+function describeQuantityWithUnit(quantityNumber, unitText) {
+    var normalizedUnit = trimWhitespace(String(unitText || ""));
+    if (isReamUnit(normalizedUnit)) {
+        return quantityNumber + " " + normalizedUnit + " (" + (quantityNumber * PIECES_PER_REAM) + " pcs)";
+    }
+    return quantityNumber + " " + normalizedUnit;
+}
+
+function fillMaterialTypeOptions(selectedValue) {
+    var options = MATERIAL_TYPE_OPTIONS[itemCategoryInput.value] || [MATERIAL_OTHER_OPTION];
+    var index;
+    itemMaterialTypeInput.textContent = "";
+    for (index = 0; index < options.length; index = index + 1) {
+        var optionElement = document.createElement("option");
+        optionElement.value = options[index];
+        optionElement.textContent = options[index];
+        itemMaterialTypeInput.appendChild(optionElement);
+    }
+    if (selectedValue && arrayContainsValue(options, selectedValue)) {
+        itemMaterialTypeInput.value = selectedValue;
+    } else if (arrayContainsValue(options, MATERIAL_OTHER_OPTION)) {
+        itemMaterialTypeInput.value = MATERIAL_OTHER_OPTION;
+    }
+    itemOtherTypeGroup.hidden = itemMaterialTypeInput.value !== MATERIAL_OTHER_OPTION;
+}
+
+function getMaterialDetail() {
+    if (itemMaterialTypeInput.value !== MATERIAL_OTHER_OPTION) { return itemMaterialTypeInput.value; }
+    return trimWhitespace(itemOtherTypeInput.value);
+}
+
+function showToast(messageText, kindText) {
+    var toastElement = document.createElement("div");
+    toastElement.className = "toast";
+    if (kindText) { toastElement.className = toastElement.className + " toast-" + kindText; }
+    toastElement.textContent = messageText;
+    toastHost.appendChild(toastElement);
+
+    window.setTimeout(function () {
+        if (toastElement.parentNode) { toastElement.parentNode.removeChild(toastElement); }
+    }, 3400);
+}
+
+function showModal(modalElement, focusElement) {
+    lastFocusedElement = document.activeElement;
+    modalElement.hidden = false;
+    addClassToken(modalElement, "open");
+    focusElement.focus();
+}
+
+function hideModal(modalElement) {
+    modalElement.hidden = true;
+    removeClassToken(modalElement, "open");
+    if (lastFocusedElement) { lastFocusedElement.focus(); }
+}
+
+
+/* --------------------------------------------------------------------------
+   6. STOCK RULES
+   --------------------------------------------------------------------------
+    Module documentation
+    Input: inventory form values, completed-order snapshots, and usage entries.
+    Process: linked-list traversal, linear search, insertion sorting,
+        indexed stack/list management, and explicit quantity comparisons.
+    Output: stock classifications, low-stock alerts, usage records, costing,
+        and inventory history.
+    Data structures/algorithms: singly linked lists, array-backed stacks,
+        linear search, and insertion sort.
+    Time complexity: searches and traversals are O(n); sorting is O(n^2).
+    Space complexity: O(n) for stored inventory, usage, alerts, and history.
+   -------------------------------------------------------------------------- */
+function getUnitQuantityInPieces(quantityNumber, unitText) {
+    return Number(quantityNumber) * getPiecesPerUnit(unitText);
+}
+
+function isLowStock(itemRecord) {
+    return getUnitQuantityInPieces(itemRecord.quantityOnHand, itemRecord.unit) <=
+        getUnitQuantityInPieces(itemRecord.reorderThreshold, itemRecord.unit);
+}
+
+function getStockState(itemRecord) {
+    if (getUnitQuantityInPieces(itemRecord.quantityOnHand, itemRecord.unit) === 0) { return STOCK_STATES.OUT; }
+    if (isLowStock(itemRecord)) { return STOCK_STATES.LOW; }
+    return STOCK_STATES.OK;
+}
+
+function findItemByName(nameText, categoryText, exceptItemId) {
+    var wantedName = toLowerCaseText(nameText);
+    var currentNode = itemsList.head;
+    while (currentNode !== null) {
+        var currentItem = currentNode.value;
+        if (currentItem.itemId !== exceptItemId &&
+            currentItem.category === categoryText &&
+            toLowerCaseText(currentItem.itemName) === wantedName) {
+            return currentItem;
+        }
+        currentNode = currentNode.next;
+    }
+    return null;
+}
+
+function validateItem(draftItem, rawQuantityText, rawThresholdText, rawCostText, exceptItemId) {
+    if (draftItem.itemName === "") { return "Enter the item name."; }
+    if (!arrayContainsValue(getCategoryValues(), draftItem.category)) { return "Pick a valid category."; }
+    if (draftItem.unit === "") { return "Enter the unit (for example ream, bottle, piece)."; }
+    if (draftItem.materialDetail === "") { return "Choose a material type or specify the other material."; }
+    if (rawQuantityText === "" || !isWholeNumber(draftItem.quantityOnHand) || draftItem.quantityOnHand < 0) {
+        return "Quantity on hand must be a whole number of 0 or more.";
+    }
+    if (rawThresholdText === "" || !isWholeNumber(draftItem.reorderThreshold) || draftItem.reorderThreshold < 0) {
+        return "Reorder threshold must be a whole number of 0 or more.";
+    }
+    if (rawCostText === "" || !isFiniteNumber(draftItem.costPerUnit) || draftItem.costPerUnit < 0) {
+        return "Cost per unit must be 0 or more.";
+    }
+    if (findItemByName(draftItem.itemName, draftItem.category, exceptItemId) !== null) {
+        return "That item already exists in this category.";
+    }
+    return "";
+}
+
+
+/* --------------------------------------------------------------------------
+   7. ALERTS & HISTORY
+   -------------------------------------------------------------------------- */
+function addNotification(typeText, relatedItemIdNumber, messageText) {
+    stackPush(notificationsStack, {
+        notificationId: nextNotificationId,
+        type: typeText,
+        relatedOrderId: null,
+        relatedItemId: relatedItemIdNumber,
+        isBroadcast: false,
+        recipientType: RECIPIENT_TYPES.STAFF,
+        message: messageText,
+        isRead: false,
+        dateCreated: getCurrentIsoDate()
+    });
+    nextNotificationId = nextNotificationId + 1;
+}
+
+// fires only when an item crosses from above the threshold to at or below it
+function checkLowStockCrossing(itemRecord, wasLowBefore) {
+    if (wasLowBefore || !isLowStock(itemRecord)) { return; }
+
+    var stockText = itemRecord.quantityOnHand === 0
+        ? "is out of stock"
+        : "is down to " + itemRecord.quantityOnHand + " " + itemRecord.unit;
+
+    addNotification(NOTIFICATION_TYPES.LOW_STOCK, itemRecord.itemId,
+        itemRecord.itemName + " " + stockText + " (reorder at " + itemRecord.reorderThreshold + ")");
+
+    showToast("Low stock: " + itemRecord.itemName, TOAST_KINDS.WARNING);
+}
+
+// MODULE 3 HOOK — INVENTORY_UPDATED entries are kept here until Module 3 exists
+function addHistoryEntry(changeLabelText, detailText) {
+    stackPush(historyStack, {
+        actionType: ACTION_TYPES.INVENTORY_UPDATED,
+        changeLabel: changeLabelText,
+        detailText: detailText,
+        dateRecorded: getCurrentIsoDate()
+    });
+}
+
+
+/* --------------------------------------------------------------------------
+   8. ITEM ACTIONS
+   -------------------------------------------------------------------------- */
+function openItemModal(existingItem) {
+    editingItemId = existingItem ? existingItem.itemId : null;
+    itemError.textContent = "";
+
+    if (existingItem) {
+        itemModalTitle.textContent = "Edit " + existingItem.itemName;
+        itemQuantityLabel.textContent = "Quantity on hand (correction)";
+        itemCategoryInput.value = existingItem.category;
+        fillMaterialTypeOptions(existingItem.materialType || MATERIAL_OTHER_OPTION);
+        itemOtherTypeInput.value = existingItem.materialType === MATERIAL_OTHER_OPTION ? (existingItem.materialDetail || "") : "";
+        updateUnitControl(existingItem.unit);
+        itemQuantityInput.value = existingItem.quantityOnHand;
+        itemThresholdInput.value = existingItem.reorderThreshold;
+        itemCostInput.value = existingItem.costPerUnit;
+    } else {
+        itemModalTitle.textContent = "Add item";
+        itemQuantityLabel.textContent = "Quantity on hand";
+        itemCategoryInput.selectedIndex = 0;
+        fillMaterialTypeOptions();
+        itemOtherTypeInput.value = "";
+        itemUnitInput.value = "";
+        updateUnitControl("");
+        itemQuantityInput.value = "";
+        itemThresholdInput.value = "";
+        itemCostInput.value = "";
+    }
+
+    showModal(itemModal, itemCategoryInput);
+}
+
+function saveItem() {
+    var rawQuantityText = trimWhitespace(itemQuantityInput.value);
+    var rawThresholdText = trimWhitespace(itemThresholdInput.value);
+    var rawCostText = trimWhitespace(itemCostInput.value);
+
+    var enteredUnit = isPaperCategory(itemCategoryInput.value) ? itemPaperUnitInput.value : itemUnitInput.value;
+    var enteredQuantity = Number(rawQuantityText);
+    var enteredThreshold = Number(rawThresholdText);
+    var enteredCost = Number(rawCostText);
+    var convertReamsToPieces = isPaperCategory(itemCategoryInput.value) && isReamUnit(enteredUnit);
+
+    // paper stock is stored as pieces so order pages x copies deduct consistently
+    var draftItem = {
+        category: itemCategoryInput.value,
+        materialType: itemMaterialTypeInput.value,
+        materialDetail: getMaterialDetail(),
+        unit: isPaperCategory(itemCategoryInput.value) ? STOCK_UNITS.PIECES : trimWhitespace(itemUnitInput.value),
+        quantityOnHand: convertReamsToPieces ? enteredQuantity * PIECES_PER_REAM : enteredQuantity,
+        reorderThreshold: convertReamsToPieces ? enteredThreshold * PIECES_PER_REAM : enteredThreshold,
+        costPerUnit: convertReamsToPieces ? enteredCost / PIECES_PER_REAM : enteredCost
+    };
+
+    draftItem.itemName = editingItemId === null
+        ? draftItem.category + " - " + draftItem.materialDetail
+        : linkedListFindItem(itemsList, editingItemId).itemName;
+
+    var errorText = validateItem(draftItem, rawQuantityText, rawThresholdText, rawCostText, editingItemId);
+    itemError.textContent = errorText;
+    if (errorText !== "") { return; }
+
+    if (editingItemId === null) {
+
+        var newItem = {
+            itemId: nextItemId,
+            itemName: draftItem.itemName,
+            category: draftItem.category,
+            materialType: draftItem.materialType,
+            materialDetail: draftItem.materialDetail,
+            unit: draftItem.unit,
+            quantityOnHand: draftItem.quantityOnHand,
+            reorderThreshold: draftItem.reorderThreshold,
+            costPerUnit: draftItem.costPerUnit,
+            lastRestocked: getCurrentIsoDate()
+        };
+
+        nextItemId = nextItemId + 1;
+        linkedListInsertAtHead(itemsList, newItem);
+
+        addHistoryEntry(CHANGE_LABELS.ITEM_ADDED, formatItemId(newItem.itemId) + " " + newItem.itemName +
+            " added with " + newItem.quantityOnHand + " " + newItem.unit);
+
+        checkLowStockCrossing(newItem, false);
+        showToast(newItem.itemName + " added", TOAST_KINDS.SUCCESS);
+
+    } else {
+
+        var editedItem = linkedListFindItem(itemsList, editingItemId);
+
+        if (editedItem === null) {
+            hideModal(itemModal);
+            return;
+        }
+
+        var wasLowBefore = isLowStock(editedItem);
+        var oldQuantity = editedItem.quantityOnHand;
+
+        editedItem.itemName = draftItem.itemName;
+        editedItem.category = draftItem.category;
+        editedItem.materialType = draftItem.materialType;
+        editedItem.materialDetail = draftItem.materialDetail;
+        editedItem.unit = draftItem.unit;
+        editedItem.quantityOnHand = draftItem.quantityOnHand;
+        editedItem.reorderThreshold = draftItem.reorderThreshold;
+        editedItem.costPerUnit = draftItem.costPerUnit;
+        editedItem.dateUpdated = getCurrentIsoDate();
+
+        addHistoryEntry(CHANGE_LABELS.ITEM_EDITED, formatItemId(editedItem.itemId) + " " + editedItem.itemName +
+            " updated (quantity " + oldQuantity + " to " + editedItem.quantityOnHand + ")");
+
+        checkLowStockCrossing(editedItem, wasLowBefore);
+        showToast(editedItem.itemName + " updated", TOAST_KINDS.SUCCESS);
+    }
+
+    armedRemoveItemId = null;
+    hideModal(itemModal);
+    commitChanges();
+}
+
+function openRestockModal(targetItem) {
+    restockingItemId = targetItem.itemId;
+    restockItemLabel.textContent = formatItemId(targetItem.itemId) + " · " + targetItem.itemName +
+        " — " + describeQuantityWithUnit(targetItem.quantityOnHand, targetItem.unit) + " on hand";
+    restockQuantityInput.value = 1;
+    restockError.textContent = "";
+    showModal(restockModal, restockQuantityInput);
+}
+
+function saveRestock() {
+    var targetItem = linkedListFindItem(itemsList, restockingItemId);
+    var addedQuantity = Number(restockQuantityInput.value);
+
+    if (targetItem === null) {
+        hideModal(restockModal);
+        return;
+    }
+
+    if (trimWhitespace(restockQuantityInput.value) === "" || !isWholeNumber(addedQuantity) || addedQuantity < 1) {
+        restockError.textContent = "Quantity received must be a whole number of 1 or more.";
+        return;
+    }
+
+    var wasLowBefore = isLowStock(targetItem);
+
+    targetItem.quantityOnHand = targetItem.quantityOnHand + addedQuantity;
+    targetItem.lastRestocked = getCurrentIsoDate();
+
+    addHistoryEntry(CHANGE_LABELS.RESTOCK, formatItemId(targetItem.itemId) + " " + targetItem.itemName +
+        " +" + describeQuantityWithUnit(addedQuantity, targetItem.unit) +
+        " (now " + describeQuantityWithUnit(targetItem.quantityOnHand, targetItem.unit) + ")");
+
+    checkLowStockCrossing(targetItem, wasLowBefore);
+
+    armedRemoveItemId = null;
+    hideModal(restockModal);
+    showToast(targetItem.itemName + " restocked", TOAST_KINDS.SUCCESS);
+    commitChanges();
+}
+
+// first click arms the button, second click removes
+function removeItem(targetItem) {
+    if (armedRemoveItemId !== targetItem.itemId) {
+        armedRemoveItemId = targetItem.itemId;
+        renderAll();
+        return;
+    }
+
+    linkedListRemoveItem(itemsList, targetItem.itemId);
+    armedRemoveItemId = null;
+
+    addHistoryEntry(CHANGE_LABELS.ITEM_REMOVED, formatItemId(targetItem.itemId) + " " + targetItem.itemName + " removed");
+    showToast(targetItem.itemName + " removed", TOAST_KINDS.WARNING);
+    commitChanges();
+}
+
+
+/* --------------------------------------------------------------------------
+   9. MATERIAL USAGE (reads completed orders that Module 5 saved)
+   -------------------------------------------------------------------------- */
+function readCustomerOrderSnapshot() {
+    var snapshotKeys = [CUSTOMER_ORDERS_SNAPSHOT_KEY, CUSTOMER_ORDER_SNAPSHOT_KEY];
+    var allOrders = [];
+    var keyIndex;
+    var rawText;
+    var parsedOrders;
+    var sourceOrders;
+    var orderIndex;
+
+    for (keyIndex = 0; keyIndex < snapshotKeys.length; keyIndex = keyIndex + 1) {
+        rawText = null;
+        try { rawText = localStorage.getItem(snapshotKeys[keyIndex]); } catch (ignoreError) { rawText = null; }
+        if (rawText === null) { continue; }
+        try { parsedOrders = parseJson(rawText); } catch (parseError) { parsedOrders = null; }
+        sourceOrders = parsedOrders;
+        if (parsedOrders && isArrayLike(parsedOrders.orders)) { sourceOrders = parsedOrders.orders; }
+        if (!isArrayLike(sourceOrders)) { continue; }
+        for (orderIndex = 0; orderIndex < sourceOrders.length; orderIndex = orderIndex + 1) {
+            allOrders[allOrders.length] = sourceOrders[orderIndex];
+        }
+    }
+    return allOrders;
+}
+
+function readOrderSnapshot() { return readCustomerOrderSnapshot(); }
+
+// materials are consumed once printing is finished
+function isCustomerOrderReadyForUsage(orderRecord) {
+    if (!orderRecord || typeof orderRecord.orderId !== "number") { return false; }
+    // Customer placement has no owner-side status transition. A submitted
+    // customer order is therefore eligible immediately; completed statuses
+    // remain supported for customer pages that confirm completion themselves.
+    return orderRecord.status === undefined || orderRecord.status === "submitted" ||
+        orderRecord.status === "confirmed" || orderRecord.status === "printing" ||
+        orderRecord.status === ORDER_STATUS.DONE || orderRecord.status === ORDER_STATUS.UNCLAIMED;
+}
+
+function isCompletedOrder(orderRecord) { return isCustomerOrderReadyForUsage(orderRecord); }
+
+function findSnapshotOrder(orderIdNumber) {
+    var snapshotOrders = readOrderSnapshot();
+    var index;
+    for (index = 0; index < snapshotOrders.length; index = index + 1) {
+        if (Number(snapshotOrders[index].orderId) === Number(orderIdNumber)) { return snapshotOrders[index]; }
+    }
+    return null;
+}
+
+// finds the PAPER item that matches an order's paper size (paper categories only,
+// so "A4" never matches a Photo Paper A4 before the Bond Paper one is checked)
+function findPaperItemForOrder(paperNameText, requiredQuantity) {
+    var wanted = toLowerCaseText(trimWhitespace(String(paperNameText || "")));
+    var currentNode = itemsList.head;
+    var fallback = null;
+    var neededQuantity = requiredQuantity === undefined ? 1 : requiredQuantity;
+
+    if (wanted === "") { return null; }
+
+    while (currentNode !== null) {
+        var candidate = currentNode.value;
+        var matches = toLowerCaseText(trimWhitespace(String(candidate.materialDetail || ""))) === wanted ||
+                      toLowerCaseText(trimWhitespace(String(candidate.itemName || ""))) === wanted;
+
+        if (matches && isPaperCategory(candidate.category) &&
+            getUnitQuantityInPieces(candidate.quantityOnHand, candidate.unit) >= neededQuantity) {
+            if (candidate.category === INVENTORY_CATEGORIES.BOND_PAPER) { return candidate; }
+            if (fallback === null) { fallback = candidate; }
+        }
+        currentNode = currentNode.next;
+    }
+    return fallback;
+}
+
+// Customer Order Placement creates the order; deduct its paper once and log it.
+function receiveCompletedOrderUsage() {
+    var snapshotOrders = readCustomerOrderSnapshot();
+    var orderIndex;
+    var usageIndex;
+
+    for (orderIndex = 0; orderIndex < snapshotOrders.length; orderIndex = orderIndex + 1) {
+
+        var orderRecord = snapshotOrders[orderIndex];
+        if (!isCompletedOrder(orderRecord)) { continue; }
+
+        var alreadyRecorded = false;
+        for (usageIndex = 0; usageIndex < listSize(usageList); usageIndex = usageIndex + 1) {
+            if (Number(listGet(usageList, usageIndex).orderId) === Number(orderRecord.orderId)) {
+                alreadyRecorded = true;
+                break;
+            }
+        }
+        if (alreadyRecorded) { continue; }
+
+        var quantityUsed = Number(orderRecord.pages) * Number(orderRecord.copies);
+        if (!isWholeNumber(quantityUsed) || quantityUsed < 1) { continue; }
+
+        var itemRecord = findPaperItemForOrder(orderRecord.paperSize, quantityUsed);
+        if (itemRecord === null) { continue; }
+
+        var wasLowBefore = isLowStock(itemRecord);
+
+        itemRecord.quantityOnHand = itemRecord.quantityOnHand - quantityUsed;
+        itemRecord.dateUpdated = getCurrentIsoDate();
+
+        listAppend(usageList, {
+            usageId: nextUsageId,
+            orderId: orderRecord.orderId,
+            itemId: itemRecord.itemId,
+            itemName: itemRecord.itemName,
+            unit: itemRecord.unit,
+            quantityUsed: quantityUsed,
+            costPerUnit: itemRecord.costPerUnit,
+            totalCost: roundMoney(quantityUsed * itemRecord.costPerUnit),
+            dateUsed: getCurrentIsoDate()
+        });
+        nextUsageId = nextUsageId + 1;
+
+        addHistoryEntry(CHANGE_LABELS.USAGE, formatOrderId(orderRecord.orderId) + " used " +
+            describeQuantityWithUnit(quantityUsed, itemRecord.unit) + " of " + itemRecord.itemName +
+            " (now " + describeQuantityWithUnit(itemRecord.quantityOnHand, itemRecord.unit) + ")");
+
+        checkLowStockCrossing(itemRecord, wasLowBefore);
+    }
+}
+
+function fillUsageOrderOptions() {
+    var previousValue = usageOrderInput.value;
+    var snapshotOrders = readOrderSnapshot();
+    var index;
+    var completedCount = 0;
+
+    usageOrderInput.textContent = "";
+
+    for (index = 0; index < snapshotOrders.length; index = index + 1) {
+        if (!isCompletedOrder(snapshotOrders[index])) { continue; }
+
+        var optionElement = document.createElement("option");
+        optionElement.value = String(snapshotOrders[index].orderId);
+        optionElement.textContent = formatOrderId(snapshotOrders[index].orderId) +
+            (snapshotOrders[index].customerName ? " — " + snapshotOrders[index].customerName : "");
+        usageOrderInput.appendChild(optionElement);
+        completedCount = completedCount + 1;
+    }
+
+    if (completedCount === 0) {
+        var emptyOption = document.createElement("option");
+        emptyOption.value = "";
+        emptyOption.textContent = "No completed orders yet";
+        usageOrderInput.appendChild(emptyOption);
+        return;
+    }
+
+    if (previousValue !== "") { usageOrderInput.value = previousValue; }
+}
+
+function fillUsageItemOptions() {
+    var previousValue = usageItemInput.value;
+    var currentNode = itemsList.head;
+    var availableCount = 0;
+
+    usageItemInput.textContent = "";
+
+    while (currentNode !== null) {
+        var currentItem = currentNode.value;
+
+        if (currentItem.quantityOnHand > 0) {
+            var optionElement = document.createElement("option");
+            optionElement.value = String(currentItem.itemId);
+            optionElement.textContent = formatItemId(currentItem.itemId) + " — " + currentItem.itemName +
+                " (" + currentItem.quantityOnHand + " " + currentItem.unit + ")";
+            usageItemInput.appendChild(optionElement);
+            availableCount = availableCount + 1;
+        }
+        currentNode = currentNode.next;
+    }
+
+    if (availableCount === 0) {
+        var emptyOption = document.createElement("option");
+        emptyOption.value = "";
+        emptyOption.textContent = "No items in stock";
+        usageItemInput.appendChild(emptyOption);
+        return;
+    }
+
+    if (previousValue !== "") { usageItemInput.value = previousValue; }
+}
+
+function syncUsagePreview() {
+    var selectedItem = linkedListFindItem(itemsList, Number(usageItemInput.value));
+    var usedQuantity = Number(usageQuantityInput.value);
+
+    if (selectedItem === null) {
+        usageAvailable.textContent = "0";
+        usageCostPreview.textContent = "₱0";
+        return;
+    }
+
+    usageAvailable.textContent = describeQuantityWithUnit(selectedItem.quantityOnHand, selectedItem.unit);
+    usageCostPreview.textContent = usedQuantity > 0
+        ? formatPeso(roundMoney(usedQuantity * selectedItem.costPerUnit))
+        : "₱0";
+}
+
+function openUsageModal() {
+    fillUsageOrderOptions();
+    fillUsageItemOptions();
+    usageQuantityInput.value = 1;
+    usageError.textContent = "";
+    syncUsagePreview();
+    showModal(usageModal, usageOrderInput);
+}
+
+function saveUsage() {
+    var orderIdNumber = Number(usageOrderInput.value);
+    var linkedOrder = usageOrderInput.value === "" ? null : findSnapshotOrder(orderIdNumber);
+    var targetItem = usageItemInput.value === "" ? null : linkedListFindItem(itemsList, Number(usageItemInput.value));
+    var usedQuantity = Number(usageQuantityInput.value);
+
+    if (linkedOrder === null || !isCompletedOrder(linkedOrder)) {
+        usageError.textContent = "Pick a completed order. Finish the order in Order Management first.";
+        return;
+    }
+    if (targetItem === null) {
+        usageError.textContent = "Pick a material that is in stock.";
+        return;
+    }
+    if (trimWhitespace(usageQuantityInput.value) === "" || !isWholeNumber(usedQuantity) || usedQuantity < 1) {
+        usageError.textContent = "Quantity used must be a whole number of 1 or more.";
+        return;
+    }
+    if (usedQuantity > targetItem.quantityOnHand) {
+        usageError.textContent = "Only " + targetItem.quantityOnHand + " " + targetItem.unit + " left in stock.";
+        return;
+    }
+
+    var wasLowBefore = isLowStock(targetItem);
+
+    targetItem.quantityOnHand = targetItem.quantityOnHand - usedQuantity;
+    targetItem.dateUpdated = getCurrentIsoDate();
+
+    listAppend(usageList, {
+        usageId: nextUsageId,
+        orderId: orderIdNumber,
+        itemId: targetItem.itemId,
+        itemName: targetItem.itemName,
+        unit: targetItem.unit,
+        quantityUsed: usedQuantity,
+        costPerUnit: targetItem.costPerUnit,
+        totalCost: roundMoney(usedQuantity * targetItem.costPerUnit),
+        dateUsed: getCurrentIsoDate()
+    });
+
+    nextUsageId = nextUsageId + 1;
+
+    addHistoryEntry(CHANGE_LABELS.USAGE, formatOrderId(orderIdNumber) + " used " +
+        describeQuantityWithUnit(usedQuantity, targetItem.unit) + " of " + targetItem.itemName +
+        " (now " + describeQuantityWithUnit(targetItem.quantityOnHand, targetItem.unit) + ")");
+
+    checkLowStockCrossing(targetItem, wasLowBefore);
+
+    armedRemoveItemId = null;
+    hideModal(usageModal);
+    showToast("Deducted " + usedQuantity + " " + targetItem.unit + " of " + targetItem.itemName, TOAST_KINDS.SUCCESS);
+    commitChanges();
+}
+
+
+/* --------------------------------------------------------------------------
+   10. RENDERING
+   -------------------------------------------------------------------------- */
+function renderAll() {
+    receiveCompletedOrderUsage();
+    renderMaterialCategoryCards();
+    renderTable();
+    renderUsage();
+    renderCosting();
+    renderNotifications();
+    renderHistory();
+}
+
+function renderMaterialCategoryCards() {
+    var container = document.getElementById("material-category-cards");
+    var categories = getCategoryValues();
+    var categoryIndex;
+
+    container.textContent = "";
+
+    for (categoryIndex = 0; categoryIndex < categories.length; categoryIndex = categoryIndex + 1) {
+        var categoryName = categories[categoryIndex];
+        var totalAvailable = 0;
+        var details = "";
+        var currentNode = itemsList.head;
+
+        while (currentNode !== null) {
+            var material = currentNode.value;
+            if (material.category === categoryName) {
+                totalAvailable = totalAvailable + getUnitQuantityInPieces(material.quantityOnHand, material.unit);
+                var detailText = material.materialDetail || material.itemName;
+                details = details + (details === "" ? "" : " · ") + detailText + ": " +
+                    describeQuantityWithUnit(material.quantityOnHand, material.unit);
+            }
+            currentNode = currentNode.next;
+        }
+
+        var card = document.createElement("div");
+        card.className = "stat-card";
+
+        var label = document.createElement("p");
+        label.className = "stat-label";
+        label.textContent = categoryName;
+
+        var value = document.createElement("p");
+        value.className = "stat-value";
+        value.textContent = totalAvailable;
+
+        var detail = document.createElement("p");
+        detail.textContent = details || "No materials added";
+
+        card.appendChild(label);
+        card.appendChild(value);
+        card.appendChild(detail);
+        container.appendChild(card);
+    }
+}
+
+function buildTextCell(cellValueText, labelText) {
+    var textCell = document.createElement("td");
+    textCell.setAttribute("data-label", labelText);
+    textCell.textContent = cellValueText;
+    return textCell;
+}
+
+function buildEmptyRow(columnCount, messageText) {
+    var emptyRow = document.createElement("tr");
+    emptyRow.className = "empty-row";
+
+    var emptyCell = document.createElement("td");
+    emptyCell.colSpan = columnCount;
+    emptyCell.textContent = messageText;
+
+    emptyRow.appendChild(emptyCell);
+    return emptyRow;
+}
+
+function buildActionButton(labelText, classText, onClickHandler) {
+    var buttonElement = document.createElement("button");
+    buttonElement.type = "button";
+    buttonElement.className = "btn " + classText + " btn-small";
+    buttonElement.textContent = labelText;
+    buttonElement.style.whiteSpace = "nowrap";
+    buttonElement.addEventListener("click", onClickHandler);
+    return buttonElement;
+}
+
+function buildItemRow(itemRecord) {
+    var itemRow = document.createElement("tr");
+    var stockState = getStockState(itemRecord);
+
+    itemRow.appendChild(buildTextCell(formatItemId(itemRecord.itemId), "Item ID"));
+    itemRow.appendChild(buildTextCell(itemRecord.itemName, "Item"));
+
+    var categoryCell = document.createElement("td");
+    categoryCell.setAttribute("data-label", "Category");
+    var categoryBadge = document.createElement("span");
+    categoryBadge.className = "badge badge-role";
+    categoryBadge.textContent = itemRecord.category;
+    categoryCell.appendChild(categoryBadge);
+    itemRow.appendChild(categoryCell);
+
+    itemRow.appendChild(buildTextCell(describeQuantityWithUnit(itemRecord.quantityOnHand, itemRecord.unit), "On hand"));
+    itemRow.appendChild(buildTextCell(describeQuantityWithUnit(itemRecord.reorderThreshold, itemRecord.unit), "Reorder at"));
+    itemRow.appendChild(buildTextCell(formatPeso(itemRecord.costPerUnit), "Cost per unit"));
+
+    var statusCell = document.createElement("td");
+    statusCell.setAttribute("data-label", "Status");
+    var statusBadge = document.createElement("span");
+    statusBadge.className = stockState === STOCK_STATES.OK ? "badge badge-active" : "badge badge-inactive";
+    statusBadge.textContent = stockState === STOCK_STATES.OUT ? "Out of stock"
+        : stockState === STOCK_STATES.LOW ? "Low stock" : "In stock";
+    statusCell.appendChild(statusBadge);
+    itemRow.appendChild(statusCell);
+
+    var actionsCell = document.createElement("td");
+    actionsCell.setAttribute("data-label", "Actions");
+    actionsCell.className = "row-actions";
+    actionsCell.style.display = "flex";
+    actionsCell.style.gap = "6px";
+
+    actionsCell.appendChild(buildActionButton("Restock", "btn-secondary", function () {
+        openRestockModal(itemRecord);
+    }));
+    actionsCell.appendChild(buildActionButton("Edit", "btn-secondary", function () {
+        openItemModal(itemRecord);
+    }));
+    actionsCell.appendChild(buildActionButton(
+        armedRemoveItemId === itemRecord.itemId ? "Confirm remove" : "Remove",
+        "btn-danger",
+        function () { removeItem(itemRecord); }
+    ));
+
+    itemRow.appendChild(actionsCell);
+    return itemRow;
+}
+
+function renderTable() {
+    itemTableBody.textContent = "";
+
+    sortItemsByName(itemsList);
+
+    var queryText = toLowerCaseText(trimWhitespace(searchInput.value));
+    var wantedCategory = categoryFilter.value;
+    var shownCount = 0;
+    var currentNode = itemsList.head;
+
+    while (currentNode !== null) {
+        var currentItem = currentNode.value;
+
+        var haystackText = toLowerCaseText(
+            formatItemId(currentItem.itemId) + " " + currentItem.itemName + " " +
+            currentItem.category + " " + currentItem.unit + " " + getStockState(currentItem)
+        );
+
+        var categoryMatches = wantedCategory === ALL_CATEGORIES_LABEL || currentItem.category === wantedCategory;
+
+        if (categoryMatches && textContains(haystackText, queryText)) {
+            itemTableBody.appendChild(buildItemRow(currentItem));
+            shownCount = shownCount + 1;
+        }
+        currentNode = currentNode.next;
+    }
+
+    if (shownCount === 0) {
+        itemTableBody.appendChild(buildEmptyRow(8, itemsList.size === 0
+            ? "No items yet. Add the first material."
+            : "No items match your search."));
+    }
+}
+
+function buildUsageRow(usageRecord) {
+    var usageRow = document.createElement("tr");
+    usageRow.appendChild(buildTextCell(formatTimestamp(usageRecord.dateUsed), "Date"));
+    usageRow.appendChild(buildTextCell(formatOrderId(usageRecord.orderId), "Order"));
+    usageRow.appendChild(buildTextCell(usageRecord.itemName, "Item"));
+    usageRow.appendChild(buildTextCell(describeQuantityWithUnit(usageRecord.quantityUsed, usageRecord.unit), "Quantity used"));
+    usageRow.appendChild(buildTextCell(formatPeso(usageRecord.totalCost), "Material cost"));
+    return usageRow;
+}
+
+// every order is listed, with its usage rows (or a placeholder row)
+function renderUsage() {
+    usageTableBody.textContent = "";
+
+    var totalCount = listSize(usageList);
+    var snapshotOrders = readOrderSnapshot();
+    var renderedOrders = {};
+    var orderIndex;
+    var index;
+
+    for (orderIndex = snapshotOrders.length - 1; orderIndex >= 0; orderIndex = orderIndex - 1) {
+        var orderRecord = snapshotOrders[orderIndex];
+        var hasUsage = false;
+
+        for (index = totalCount - 1; index >= 0; index = index - 1) {
+            var matchingUsage = listGet(usageList, index);
+            if (Number(matchingUsage.orderId) !== Number(orderRecord.orderId)) { continue; }
+
+            hasUsage = true;
+            usageTableBody.appendChild(buildUsageRow(matchingUsage));
+        }
+
+        renderedOrders[String(orderRecord.orderId)] = true;
+
+        if (!hasUsage) {
+            var emptyUsageRow = document.createElement("tr");
+            emptyUsageRow.appendChild(buildTextCell("—", "Date"));
+            emptyUsageRow.appendChild(buildTextCell(formatOrderId(orderRecord.orderId), "Order"));
+            emptyUsageRow.appendChild(buildTextCell(orderRecord.customerName || "No material recorded", "Item"));
+            emptyUsageRow.appendChild(buildTextCell("—", "Quantity used"));
+            emptyUsageRow.appendChild(buildTextCell("—", "Material cost"));
+            usageTableBody.appendChild(emptyUsageRow);
+        }
+    }
+
+    // usage records whose order is no longer in the snapshot
+    for (index = totalCount - 1; index >= 0; index = index - 1) {
+        var usageRecord = listGet(usageList, index);
+        if (renderedOrders[String(usageRecord.orderId)]) { continue; }
+        usageTableBody.appendChild(buildUsageRow(usageRecord));
+    }
+
+    if (usageTableBody.childNodes.length === 0) {
+        usageTableBody.appendChild(buildEmptyRow(5, "No orders or usage recorded yet."));
+    }
+}
+
+// groups usage by order and compares the materials cost with the order price
+function renderCosting() {
+    costingTableBody.textContent = "";
+
+    var groupsList = createLinkedList();
+    var totalCount = listSize(usageList);
+    var index;
+
+    for (index = 0; index < totalCount; index = index + 1) {
+        var usageRecord = listGet(usageList, index);
+        var groupNode = groupsList.head;
+        var foundGroup = null;
+
+        while (groupNode !== null) {
+            if (groupNode.value.orderId === usageRecord.orderId) {
+                foundGroup = groupNode.value;
+                break;
+            }
+            groupNode = groupNode.next;
+        }
+
+        if (foundGroup === null) {
+            foundGroup = { orderId: usageRecord.orderId, materialsCost: 0 };
+            linkedListInsertAtHead(groupsList, foundGroup);
+        }
+
+        foundGroup.materialsCost = roundMoney(foundGroup.materialsCost + usageRecord.totalCost);
+    }
+
+    if (groupsList.size === 0) {
+        costingTableBody.appendChild(buildEmptyRow(5, "Costing appears once material usage is recorded."));
+        return;
+    }
+
+    var currentNode = groupsList.head;
+
+    while (currentNode !== null) {
+        var group = currentNode.value;
+        var linkedOrder = findSnapshotOrder(group.orderId);
+        var costingRow = document.createElement("tr");
+
+        costingRow.appendChild(buildTextCell(formatOrderId(group.orderId), "Order"));
+        costingRow.appendChild(buildTextCell(linkedOrder ? linkedOrder.customerName : "—", "Customer"));
+        costingRow.appendChild(buildTextCell(formatPeso(group.materialsCost), "Materials cost"));
+
+        var orderTotal = linkedOrder ? Number(linkedOrder.totalPrice) : NOT_A_NUMBER;
+        if (linkedOrder && isFiniteNumber(orderTotal)) {
+            costingRow.appendChild(buildTextCell(formatPeso(orderTotal), "Order total"));
+            costingRow.appendChild(buildTextCell(formatPeso(roundMoney(orderTotal - group.materialsCost)), "Margin"));
+        } else {
+            costingRow.appendChild(buildTextCell("—", "Order total"));
+            costingRow.appendChild(buildTextCell("—", "Margin"));
+        }
+
+        costingTableBody.appendChild(costingRow);
+        currentNode = currentNode.next;
+    }
+}
+
+function buildFeedItem(labelText, detailText, timeText) {
+    var itemElement = document.createElement("li");
+    itemElement.className = "activity-item";
+
+    var labelSpan = document.createElement("span");
+    labelSpan.className = "badge badge-role";
+    labelSpan.textContent = labelText;
+
+    var detailSpan = document.createElement("span");
+    detailSpan.className = "activity-text";
+    detailSpan.textContent = detailText;
+
+    var timeSpan = document.createElement("span");
+    timeSpan.className = "activity-time";
+    timeSpan.textContent = timeText;
+
+    itemElement.appendChild(labelSpan);
+    itemElement.appendChild(detailSpan);
+    itemElement.appendChild(timeSpan);
+    return itemElement;
+}
+
+function renderNotifications() {
+    notificationListElement.textContent = "";
+
+    if (notificationsStack.stackCount === 0) {
+        notificationListElement.appendChild(buildFeedItem("None", "No alerts yet.", ""));
+        return;
+    }
+
+    var offsetIndex;
+    for (offsetIndex = 0; offsetIndex < notificationsStack.stackCount; offsetIndex = offsetIndex + 1) {
+        var noteRecord = stackGetFromTop(notificationsStack, offsetIndex);
+        notificationListElement.appendChild(buildFeedItem(noteRecord.type, noteRecord.message, formatTimestamp(noteRecord.dateCreated)));
+    }
+}
+
+function renderHistory() {
+    historyListElement.textContent = "";
+
+    if (historyStack.stackCount === 0) {
+        historyListElement.appendChild(buildFeedItem("None", "No inventory changes yet.", ""));
+        return;
+    }
+
+    var offsetIndex;
+    for (offsetIndex = 0; offsetIndex < historyStack.stackCount; offsetIndex = offsetIndex + 1) {
+        var entryRecord = stackGetFromTop(historyStack, offsetIndex);
+        historyListElement.appendChild(buildFeedItem(entryRecord.changeLabel, entryRecord.detailText, formatTimestamp(entryRecord.dateRecorded)));
+    }
+}
+
+
+/* --------------------------------------------------------------------------
+   11. SAVING & HAND-OFF TO MODULE 5 (localStorage)
+   -------------------------------------------------------------------------- */
+function saveSnapshot() {
+    var itemsData = [];
+    var usageData = [];
+    var notificationsData = [];
+    var historyData = [];
+    var index;
+
+    var currentNode = itemsList.head;
+    while (currentNode !== null) {
+        itemsData[itemsData.length] = currentNode.value;
+        currentNode = currentNode.next;
+    }
+
+    for (index = 0; index < listSize(usageList); index = index + 1) {
+        usageData[usageData.length] = listGet(usageList, index);
+    }
+    for (index = 0; index < notificationsStack.stackCount; index = index + 1) {
+        notificationsData[notificationsData.length] = notificationsStack.stackData[index];
+    }
+    for (index = 0; index < historyStack.stackCount; index = index + 1) {
+        historyData[historyData.length] = historyStack.stackData[index];
+    }
+
+    var snapshotObject = {
+        items: itemsData,
+        usage: usageData,
+        notifications: notificationsData,
+        history: historyData,
+        nextItemId: nextItemId,
+        nextUsageId: nextUsageId,
+        nextNotificationId: nextNotificationId
+    };
+
+    try { localStorage.setItem(INVENTORY_SNAPSHOT_KEY, stringifyJson(snapshotObject)); } catch (ignoreError) {}
+}
+
+function loadSnapshot() {
+    var rawText = null;
+    var snapshotObject = null;
+    var index;
+
+    try { rawText = localStorage.getItem(INVENTORY_SNAPSHOT_KEY); } catch (ignoreError) { return; }
+    if (rawText === null) { return; }
+
+    try { snapshotObject = parseJson(rawText); } catch (parseError) { return; }
+
+    if (!snapshotObject || !isArrayLike(snapshotObject.items)) { return; }
+
+    // the saved order is head-first, so the tail goes in first
+    for (index = snapshotObject.items.length - 1; index >= 0; index = index - 1) {
+        linkedListInsertAtHead(itemsList, snapshotObject.items[index]);
+    }
+
+    if (isArrayLike(snapshotObject.usage)) {
+        for (index = 0; index < snapshotObject.usage.length; index = index + 1) {
+            listAppend(usageList, snapshotObject.usage[index]);
+        }
+    }
+    if (isArrayLike(snapshotObject.notifications)) {
+        for (index = 0; index < snapshotObject.notifications.length; index = index + 1) {
+            stackPush(notificationsStack, snapshotObject.notifications[index]);
+        }
+    }
+    if (isArrayLike(snapshotObject.history)) {
+        for (index = 0; index < snapshotObject.history.length; index = index + 1) {
+            stackPush(historyStack, snapshotObject.history[index]);
+        }
+    }
+
+    nextItemId = snapshotObject.nextItemId || 1;
+    nextUsageId = snapshotObject.nextUsageId || 1;
+    nextNotificationId = snapshotObject.nextNotificationId || 1;
+}
+
+// tells Module 5 (dashboard "Low stock" card) and Module 16 how many items are low
+function publishLowStock() {
+    var lowItems = [];
+    var currentNode = itemsList.head;
+
+    while (currentNode !== null) {
+        var currentItem = currentNode.value;
+
+        if (isLowStock(currentItem)) {
+            lowItems[lowItems.length] = {
+                itemId: currentItem.itemId,
+                itemNumber: formatItemId(currentItem.itemId),
+                itemName: currentItem.itemName,
+                quantityOnHand: currentItem.quantityOnHand,
+                reorderThreshold: currentItem.reorderThreshold
+            };
+        }
+        currentNode = currentNode.next;
+    }
+
+    var handoff = {
+        lowStockCount: lowItems.length,
+        lowStockItems: lowItems,
+        latestNotification: notificationsStack.stackCount > 0 ? stackGetFromTop(notificationsStack, 0) : null,
+        dateSent: getCurrentIsoDate(),
+        messageId: new Date().getTime()
+    };
+
+    try { localStorage.setItem(LOW_STOCK_HANDOFF_KEY, stringifyJson(handoff)); } catch (ignoreError) {}
+
+    window.dispatchEvent(new CustomEvent("gsj:low-stock", { detail: handoff }));
+}
+
+function commitChanges() {
+    renderAll();
+    saveSnapshot();
+    publishLowStock();
+}
+
+function clearAllData() {
+    itemsList = createLinkedList();
+    usageList = createList();
+    notificationsStack = createStack();
+    historyStack = createStack();
+    nextItemId = 1;
+    nextUsageId = 1;
+    nextNotificationId = 1;
+    armedRemoveItemId = null;
+    searchInput.value = "";
+    categoryFilter.selectedIndex = 0;
+
+    commitChanges();
+}
+
+
+/* --------------------------------------------------------------------------
+   12. EVENTS
+   -------------------------------------------------------------------------- */
+document.getElementById("add-btn").addEventListener("click", function () { openItemModal(null); });
+document.getElementById("usage-btn").addEventListener("click", openUsageModal);
+document.getElementById("reset-btn").addEventListener("click", clearAllData);
+
+document.getElementById("item-save-btn").addEventListener("click", saveItem);
+document.getElementById("item-cancel-btn").addEventListener("click", function () { hideModal(itemModal); });
+document.getElementById("item-modal-close").addEventListener("click", function () { hideModal(itemModal); });
+
+itemCategoryInput.addEventListener("change", function () {
+    fillMaterialTypeOptions();
+    itemOtherTypeInput.value = "";
+    updateUnitControl();
+});
+itemMaterialTypeInput.addEventListener("change", function () {
+    itemOtherTypeGroup.hidden = itemMaterialTypeInput.value !== MATERIAL_OTHER_OPTION;
+});
+
+document.getElementById("restock-save-btn").addEventListener("click", saveRestock);
+document.getElementById("restock-cancel-btn").addEventListener("click", function () { hideModal(restockModal); });
+document.getElementById("restock-modal-close").addEventListener("click", function () { hideModal(restockModal); });
+
+document.getElementById("usage-save-btn").addEventListener("click", saveUsage);
+document.getElementById("usage-cancel-btn").addEventListener("click", function () { hideModal(usageModal); });
+document.getElementById("usage-modal-close").addEventListener("click", function () { hideModal(usageModal); });
+
+searchInput.addEventListener("input", renderTable);
+categoryFilter.addEventListener("change", renderTable);
+
+usageModal.addEventListener("input", syncUsagePreview);
+usageModal.addEventListener("change", syncUsagePreview);
+
+itemModal.addEventListener("click", function (clickEvent) { if (clickEvent.target === itemModal) { hideModal(itemModal); } });
+restockModal.addEventListener("click", function (clickEvent) { if (clickEvent.target === restockModal) { hideModal(restockModal); } });
+usageModal.addEventListener("click", function (clickEvent) { if (clickEvent.target === usageModal) { hideModal(usageModal); } });
+
+document.addEventListener("keydown", function (keyboardEvent) {
+    if (keyboardEvent.key !== "Escape") { return; }
+    if (!itemModal.hidden) { hideModal(itemModal); }
+    else if (!restockModal.hidden) { hideModal(restockModal); }
+    else if (!usageModal.hidden) { hideModal(usageModal); }
+});
+
+itemModal.addEventListener("keydown", function (keyboardEvent) {
+    if (keyboardEvent.key === "Enter" && keyboardEvent.target.tagName === "INPUT") { keyboardEvent.preventDefault(); saveItem(); }
+});
+restockModal.addEventListener("keydown", function (keyboardEvent) {
+    if (keyboardEvent.key === "Enter" && keyboardEvent.target.tagName === "INPUT") { keyboardEvent.preventDefault(); saveRestock(); }
+});
+usageModal.addEventListener("keydown", function (keyboardEvent) {
+    if (keyboardEvent.key === "Enter" && keyboardEvent.target.tagName === "INPUT") { keyboardEvent.preventDefault(); saveUsage(); }
+});
+
+// Module 5 saved a new order or status: re-read completed orders, redraw,
+// and persist any automatic deduction right away so it survives a refresh.
+function refreshOrderManagementData() {
+    renderAll();
+    saveSnapshot();
+    publishLowStock();
+
+    if (!usageModal.hidden) {
+        fillUsageOrderOptions();
+        syncUsagePreview();
+    }
+}
+
+window.addEventListener("storage", function (storageEvent) {
+    if (storageEvent.key === CUSTOMER_ORDERS_SNAPSHOT_KEY || storageEvent.key === CUSTOMER_ORDER_SNAPSHOT_KEY) {
+        refreshOrderManagementData();
+    }
+});
+
+window.addEventListener("gsj:customer-order-created", refreshOrderManagementData);
+
+
+/* --------------------------------------------------------------------------
+   13. SHARED STORE (window.GSJ_INVENTORY)
+   -------------------------------------------------------------------------- */
+window.GSJ_INVENTORY = {
+
+    findItemById: function (targetItemId) { return linkedListFindItem(itemsList, targetItemId); },
+
+    walkItems: function (visitFunction) {
+        var currentNode = itemsList.head;
+        while (currentNode !== null) {
+            visitFunction(currentNode.value);
+            currentNode = currentNode.next;
+        }
+    },
+
+    getLowStockCount: function () {
+        var lowCount = 0;
+        var currentNode = itemsList.head;
+        while (currentNode !== null) {
+            if (isLowStock(currentNode.value)) { lowCount = lowCount + 1; }
+            currentNode = currentNode.next;
+        }
+        return lowCount;
+    },
+
+    refreshOrders: function () { refreshOrderManagementData(); }
+};
+
+
+/* --------------------------------------------------------------------------
+   14. START
+   -------------------------------------------------------------------------- */
+populateSelect(itemCategoryInput, INVENTORY_CATEGORIES);
+
+var allCategoriesOption = document.createElement("option");
+allCategoriesOption.value = ALL_CATEGORIES_LABEL;
+allCategoriesOption.textContent = ALL_CATEGORIES_LABEL;
+categoryFilter.appendChild(allCategoriesOption);
+populateSelect(categoryFilter, INVENTORY_CATEGORIES);
+
+loadSnapshot();
+commitChanges();
+</script>
+</body>
+</html>

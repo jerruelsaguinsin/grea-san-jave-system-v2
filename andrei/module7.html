@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payments &amp; Receipts — Grea San Jave</title>
+  <link rel="stylesheet" href="anika.css">
+</head>
+<body>
+<main style="margin-left:0">
+<!--MODULE 7 — PAYMENTS & RECEIPTS -->
+<section id="section-payments">
+  <h1 class="page-title">Payments &amp; Receipts</h1>
+  <p class="page-subtitle">Payments are attached to existing Module 6 orders. A valid payment automatically enters the confirmation queue. Every confirmed payment can produce a printable receipt.</p>
+
+  <div class="card">
+    <h2 class="card-title">Orders Awaiting Payment</h2>
+    <div class="table-wrap">
+      <table class="compact-table">
+        <thead><tr><th>Order</th><th>Customer</th><th>Order total</th><th>Paid</th><th>Balance</th><th>Type</th><th>Action</th></tr></thead>
+        <tbody id="pmOrdersBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" id="pmPaymentPanel" hidden>
+    <h2 class="card-title">Receive Payment</h2>
+    <form id="pmPaymentForm" novalidate>
+      <input id="pmSelectedOrderId" type="hidden">
+      <div class="form-row">
+        <div class="form-group"><label>Order</label><div class="readonly-box" id="pmSelectedOrder">—</div></div>
+        <div class="form-group"><label>Order total</label><div class="readonly-box" id="pmSelectedTotal">—</div></div>
+        <div class="form-group"><label>Current paid</label><div class="readonly-box" id="pmSelectedPaid">—</div></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Remaining balance</label><div class="readonly-box" id="pmSelectedBalance">—</div></div>
+        <div class="form-group"><label>Order type</label><div class="readonly-box" id="pmSelectedType">—</div></div>
+        <div class="form-group"><label for="pmPaymentAmount">Amount received (₱)</label><input id="pmPaymentAmount" type="number" min="0.01" step="0.01" required></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label for="pmPaymentMethod">Payment method</label><select id="pmPaymentMethod"><option value="Cash">Cash</option><option value="GCash">GCash</option><option value="Bank Transfer">Bank Transfer</option></select></div>
+        <div class="form-group"><label>Payment type</label><div class="privacy-consent"><input id="pmIsDown" type="checkbox"><label for="pmIsDown">This is a down payment (partial)</label></div></div>
+        <div class="form-group" id="pmProofWrap" hidden><label for="pmProof">Proof of payment</label><input id="pmProof" type="file" accept="image/*"><div class="field-hint">Required for GCash and Bank Transfer.</div></div>
+      </div>
+      <div class="field-hint">Rush/Regular status comes from Module 6. If Module 6 changes the order to rush before payment, Module 7 will read the updated status automatically.</div>
+      <div id="pmMessage" class="field-message"></div>
+      <div class="section-actions"><button class="btn btn-primary" type="submit">Add to confirmation queue</button><button class="btn btn-secondary" type="button" onclick="PaymentsModule.closePayment()">Cancel</button></div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2 class="card-title">Confirmation Queue <span class="field-hint">(<span id="pmQueueCount">0</span>)</span></h2>
+    <p class="field-hint">Payments are not FIFO. Any authorized pending payment may be confirmed.</p>
+    <div class="table-wrap">
+      <table class="compact-table">
+        <thead><tr><th>#</th><th>Order</th><th>Customer</th><th>Amount</th><th>Method</th><th>Payment type</th><th>Order type</th><th>Action</th></tr></thead>
+        <tbody id="pmQueueBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="card-title">Confirmed Payments &amp; Receipts</h2>
+    <p class="field-hint">The confirmed payment record and its receipt are shown together. Nothing is deleted when the day is archived.</p>
+    <div class="table-wrap">
+      <table class="compact-table">
+        <thead><tr><th>Order</th><th>Customer</th><th>Amount</th><th>Method</th><th>Order type</th><th>Confirmed by</th><th>Receipt</th></tr></thead>
+        <tbody id="pmConfirmedBody"></tbody>
+      </table>
+    </div>
+    <div class="field-hint">Active confirmed payments: <span id="pmConfirmedCount">0</span> · Archived payments: <span id="pmArchivedCount">0</span></div>
+  </div>
+
+  <details class="card dev-tools no-print">
+    <summary>Module 7 demo tools — remove before owner handover</summary>
+    <div class="section-actions">
+      <button class="btn btn-secondary btn-small" type="button" onclick="PaymentsModule.demoLoad()">Load demo orders</button>
+      <button class="btn btn-secondary btn-small" type="button" onclick="PaymentsModule.archiveDay()">Archive confirmed day</button>
+    </div>
+  </details>
+</section>
+<script src="module7.js"></script>
+</main>
+</body>
+</html>

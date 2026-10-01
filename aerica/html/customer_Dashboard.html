@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grea San Jave — Module 11: Customer Dashboard</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  body.dashboard-page {
+    background: var(--surface-color);
+  }
+</style>
+</head>
+<body class="dashboard-page">
+
+  <main>
+    <div class="customer-switcher">
+      <label for="customerSwitcher" class="customer-switcher-label" style="margin:0;">Viewing as:</label>
+      <select id="customerSwitcher"></select>
+    </div>
+    <h1 class="page-title">Customer Dashboard / Home</h1>
+
+    <div id="announcementBanner"></div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="statUnread">0</div>
+        <div class="stat-label">Unread Notifications</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statActivePromos">0</div>
+        <div class="stat-label">Active Promos Available</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statSuki">—</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title active-order-title">Active Order</h2>
+      <div id="activeOrderTeaser"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Promos You Can Use Right Now</h2>
+      <div class="table-wrap">
+        <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
+          <colgroup>
+            <col style="width:20%;">
+            <col style="width:50%;">
+            <col style="width:30%;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th style="text-align:left; padding:0.75rem 1rem;">Discount</th>
+              <th style="text-align:left; padding:0.75rem 1rem;">Description</th>
+              <th style="text-align:left; padding:0.75rem 1rem;">Eligibility</th>
+            </tr>
+          </thead>
+          <tbody id="dashboardPromoList"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <button class="btn btn-primary" id="newOrderShortcut" type="button">+ New Order</button>
+      <span style="font-size:0.8rem;color:var(--text-muted);margin-left:0.6rem;">
+        (shortcut into Module 14 — Customer Order Placement)
+      </span>
+    </div>
+  </main>
+
+  <script src="customer_Dashboard.js"></script>
+</body>
+</html>

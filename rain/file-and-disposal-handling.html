@@ -1,0 +1,2648 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+    <title>File Handling &amp; Disposal</title>
+<link rel="stylesheet" href="anika.css">
+      
+    <base target="_blank">
+
+</head>
+
+<body>
+
+    <main>
+
+        <h1 class="page-title">File Handling &amp; Disposal</h1>
+        <p class="page-subtitle"></p>
+
+        <!-- SUMMARY CARDS -->
+        <section class="stat-grid" aria-label="File summary">
+
+            <div class="stat-card">
+                <p class="stat-label">Total files</p>
+                <p class="stat-value" id="stat-total">0</p>
+            </div>
+
+            <div class="stat-card">
+                <p class="stat-label">Valid</p>
+                <p class="stat-value" id="stat-valid">0</p>
+            </div>
+
+            <div class="stat-card">
+                <p class="stat-label">Flagged</p>
+                <p class="stat-value" id="stat-flagged">0</p>
+            </div>
+
+            <div class="stat-card">
+                <p class="stat-label">Disposed</p>
+                <p class="stat-value" id="stat-disposed">0</p>
+            </div>
+
+        </section>
+
+        <section class="card">
+
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+
+                <h3  style="margin:0;">Print Files</h3>
+
+                <div style="display:flex; align-items:center; gap:10px;">
+
+                    <input
+                        type="search"
+                        id="search-input"
+                        class="input search-input"
+                        placeholder="Search files or orders..."
+                        autocomplete="off"
+                        style="padding:6px 10px; flex-grow:1;">
+
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        id="export-btn"
+                        style="white-space:nowrap; flex-grow:1;">
+                        Export log
+                    </button>
+
+
+                </div>
+
+            </div>
+
+            <hr style="width:100%; margin:12px 0; border:none; border-top:1px solid #e5e5e5;">
+
+            <div class="table-wrap">
+
+                <table class="data-table">
+
+                    <thead>
+                        <tr>
+                            <th scope="col">File ID</th>
+                            <th scope="col">Linked order</th>
+                            <th scope="col">File name</th>
+                            <th scope="col">Channel</th>
+                            <th scope="col">Size</th>
+                            <th scope="col">Validation</th>
+                            <th scope="col">Order status</th>
+                            <th scope="col">Actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="file-table-body">
+                        <!-- built via script -->
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- ADD FILE DIALOG -->
+    <div
+        class="modal-overlay"
+        id="file-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        hidden>
+
+        <div class="modal-box">
+
+            <div class="modal-head">
+
+                <button
+                    type="button"
+                    class="icon-btn"
+                    id="modal-close"
+                    aria-label="Close">
+                    &#215;
+                </button>
+
+                <h3 id="modal-title">New print file</h3>
+
+            </div>
+
+            <div class="modal-body">
+
+                <div class="form-row">
+
+                    <div class="form-group" id="field-orderId">
+
+                        <label  for="orderId">Order ID</label>
+
+                  <select id="orderId" class="input">
+    <option value="">No orders available</option>
+</select>
+
+                        <p class="field-error" id="orderId-error"></p>
+
+                    </div>
+
+                    <div class="form-group" id="field-fileChannel">
+
+                        <label  for="fileChannel">Received via</label>
+
+ <select id="fileChannel" class="input" aria-describedby="fileChannel-error">
+     <option value="">Select an order first</option>
+ </select>
+
+                        <p class="field-error" id="fileChannel-error"></p>
+
+                    </div>
+
+                    <div class="form-group" id="field-filePicker">
+
+                        <label  for="filePicker">Print file</label>
+
+                        <input
+                            type="file"
+                            id="filePicker"
+                            accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif,.docx,.doc,.ai,.psd"
+                            style="display: none;">
+
+                        <label
+                            class="btn btn-secondary btn-block"
+                            id="file-drop"
+                            for="filePicker">
+                            Choose print file
+                        </label>
+
+                        <p class="field-hint" id="file-status" aria-live="polite">No file selected.</p>
+
+                        <p class="field-error" id="filePicker-error"></p>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-actions">
+
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        id="cancel-btn">
+                        Cancel
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn btn-primary"
+                        id="save-btn">
+                        Add
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- VIEW FILE DIALOG -->
+    <div
+        class="modal-overlay"
+        id="view-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="view-modal-title"
+        hidden>
+
+        <div class="modal-box">
+
+            <div class="modal-head">
+
+                <h3 id="view-modal-title">File details</h3>
+
+                <button
+                    type="button"
+                    class="icon-btn"
+                    id="view-modal-close"
+                    aria-label="Close">
+                    &#215;
+                </button>
+
+            </div>
+
+            <div class="modal-body" id="view-modal-body">
+                <!-- details via script -->
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-primary" id="view-modal-done">Done</button>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div id="toastContainer" aria-live="polite"></div>
+
+    <script>
+        
+/* ==========================================================================
+   HAND-CODED HELPERS - plain loops and index assignment only.
+   No array methods, no string-method shortcuts, no Math, no JSON, no Number.is*.
+   ========================================================================== */
+//  The value for 'not a number' (0 divided by 0 gives NaN)
+var NOT_A_NUMBER = 0 / 0;
+//  All capital letters, used to change letter case
+var UPPERCASE_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+//  All small letters, used to change letter case
+var LOWERCASE_LETTERS = "abcdefghijklmnopqrstuvwxyz";
+//  Short month names, used when showing dates
+var MONTH_ABBREVIATIONS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+ 
+//  Checks if one character is a space, tab, or new line
+function isSpaceCharacter(characterText) {
+    return characterText === " " || characterText === "\t" || characterText === "\n" ||
+        characterText === "\r" || characterText === "\f" || characterText === "\v";
+}
+ 
+//  Copies the letters from the start position up to (not including) the end position
+function copySubstring(sourceText, startIndex, endIndex) {
+    var resultText = "";
+    var charIndex;
+    for (charIndex = startIndex; charIndex < endIndex && charIndex < sourceText.length; charIndex = charIndex + 1) {
+        resultText = resultText + sourceText[charIndex];
+    }
+    return resultText;
+}
+ 
+//  Removes spaces from the start and end of a text
+function trimWhitespace(rawValue) {
+    var sourceText = String(rawValue);
+    var startIndex = 0;
+    var endIndex = sourceText.length;
+    while (startIndex < endIndex && isSpaceCharacter(sourceText[startIndex])) { startIndex = startIndex + 1; }
+    while (endIndex > startIndex && isSpaceCharacter(sourceText[endIndex - 1])) { endIndex = endIndex - 1; }
+    return copySubstring(sourceText, startIndex, endIndex);
+}
+ 
+//  Changes letters using two lists (from-letters and to-letters), one letter at a time
+function convertLetterCase(rawValue, fromLetters, toLetters) {
+    var sourceText = String(rawValue);
+    var resultText = "";
+    var textIndex;
+    var letterIndex;
+    var wasConverted;
+    for (textIndex = 0; textIndex < sourceText.length; textIndex = textIndex + 1) {
+        wasConverted = false;
+        for (letterIndex = 0; letterIndex < 26; letterIndex = letterIndex + 1) {
+            if (sourceText[textIndex] === fromLetters[letterIndex]) {
+                resultText = resultText + toLetters[letterIndex];
+                wasConverted = true;
+                break;
+            }
+        }
+        if (!wasConverted) { resultText = resultText + sourceText[textIndex]; }
+    }
+    return resultText;
+}
+//  Changes all capital letters to small letters
+function toLowerCaseText(rawValue) { return convertLetterCase(rawValue, UPPERCASE_LETTERS, LOWERCASE_LETTERS); }
+//  Changes all small letters to capital letters
+function toUpperCaseText(rawValue) { return convertLetterCase(rawValue, LOWERCASE_LETTERS, UPPERCASE_LETTERS); }
+ 
+//  Checks if a text contains another text (returns true or false)
+function textIncludes(sourceValue, targetValue) {
+    var sourceText = String(sourceValue);
+    var targetText = String(targetValue);
+    var startIndex;
+    var offsetIndex;
+    var isMatch;
+    if (targetText === "") { return true; }
+    for (startIndex = 0; startIndex + targetText.length <= sourceText.length; startIndex = startIndex + 1) {
+        isMatch = true;
+        for (offsetIndex = 0; offsetIndex < targetText.length; offsetIndex = offsetIndex + 1) {
+            if (sourceText[startIndex + offsetIndex] !== targetText[offsetIndex]) { isMatch = false; break; }
+        }
+        if (isMatch) { return true; }
+    }
+    return false;
+}
+ 
+/* ---- type checks and math ---- */
+//  Checks if a value is an array (has a length number)
+function isArrayLike(value) { return value !== null && typeof value === "object" && typeof value.length === "number"; }
+//  Checks if a value is a real number (not NaN and not Infinity)
+function isFiniteNumber(numberValue) {
+    return typeof numberValue === "number" && numberValue === numberValue &&
+        numberValue !== 1 / 0 && numberValue !== -1 / 0;
+}
+//  Checks if a number has no decimal part
+function isWholeNumber(numberValue) { return isFiniteNumber(numberValue) && numberValue % 1 === 0; }
+//  Rounds a number down (3.9 becomes 3, -3.1 becomes -4)
+function floorNumber(numberValue) {
+    var truncatedValue = numberValue - (numberValue % 1);
+    if (numberValue < 0 && truncatedValue !== numberValue) { truncatedValue = truncatedValue - 1; }
+    return truncatedValue;
+}
+//  Rounds a number to the nearest whole number
+function roundNumber(numberValue) { return floorNumber(numberValue + 0.5); }
+//  Returns the bigger of two numbers
+function maxNumber(firstNumber, secondNumber) { return firstNumber > secondNumber ? firstNumber : secondNumber; }
+ 
+/* ---- class tokens ---- */
+//  Checks if an element already has a CSS class name
+function hasClassToken(element, targetClass) {
+    var classText = element.className;
+    var tokenText = "";
+    var charIndex;
+    for (charIndex = 0; charIndex <= classText.length; charIndex = charIndex + 1) {
+        if (charIndex === classText.length || isSpaceCharacter(classText[charIndex])) {
+            if (tokenText === targetClass) { return true; }
+            tokenText = "";
+        } else { tokenText = tokenText + classText[charIndex]; }
+    }
+    return false;
+}
+//  Adds a CSS class name to an element (only if it is not there yet)
+function addClassToken(element, newClass) {
+    if (hasClassToken(element, newClass)) { return; }
+    if (element.className !== "") { element.className = element.className + " "; }
+    element.className = element.className + newClass;
+}
+//  Removes a CSS class name from an element
+function removeClassToken(element, targetClass) {
+    var classText = element.className;
+    var resultText = "";
+    var tokenText = "";
+    var charIndex;
+    for (charIndex = 0; charIndex <= classText.length; charIndex = charIndex + 1) {
+        if (charIndex === classText.length || isSpaceCharacter(classText[charIndex])) {
+            if (tokenText !== "" && tokenText !== targetClass) {
+                if (resultText !== "") { resultText = resultText + " "; }
+                resultText = resultText + tokenText;
+            }
+            tokenText = "";
+        } else { tokenText = tokenText + classText[charIndex]; }
+    }
+    element.className = resultText;
+}
+//  Checks if the chosen option in a dropdown is disabled
+function isSelectedOptionDisabled(selectElement) {
+    return selectElement.selectedIndex >= 0 && selectElement.options[selectElement.selectedIndex].disabled;
+}
+ 
+/* ---- JSON (hand-written writer and reader) ---- */
+//  Puts quotes around a text and escapes special characters, so it is safe for JSON
+function quoteJsonString(sourceText) {
+    var quotedText = "\"";
+    var charIndex;
+    var currentChar;
+    for (charIndex = 0; charIndex < sourceText.length; charIndex = charIndex + 1) {
+        currentChar = sourceText[charIndex];
+        if (currentChar === "\"") { quotedText = quotedText + "\\\""; }
+        else if (currentChar === "\\") { quotedText = quotedText + "\\\\"; }
+        else if (currentChar === "\n") { quotedText = quotedText + "\\n"; }
+        else if (currentChar === "\r") { quotedText = quotedText + "\\r"; }
+        else if (currentChar === "\t") { quotedText = quotedText + "\\t"; }
+        else { quotedText = quotedText + currentChar; }
+    }
+    return quotedText + "\"";
+}
+//  Turns a value (text, number, array, or object) into JSON text
+function stringifyJson(value) {
+    var valueType = typeof value;
+    var jsonText;
+    var itemIndex;
+    var keyName;
+    var isFirstKey;
+    if (value === null || value === undefined || valueType === "function") { return "null"; }
+    if (valueType === "number") { return isFiniteNumber(value) ? String(value) : "null"; }
+    if (valueType === "boolean") { return value ? "true" : "false"; }
+    if (valueType === "string") { return quoteJsonString(value); }
+    if (isArrayLike(value)) {
+        jsonText = "[";
+        for (itemIndex = 0; itemIndex < value.length; itemIndex = itemIndex + 1) {
+            if (itemIndex > 0) { jsonText = jsonText + ","; }
+            jsonText = jsonText + stringifyJson(value[itemIndex]);
+        }
+        return jsonText + "]";
+    }
+    jsonText = "{";
+    isFirstKey = true;
+    for (keyName in value) {
+        if (value[keyName] === undefined || typeof value[keyName] === "function") { continue; }
+        if (!isFirstKey) { jsonText = jsonText + ","; }
+        isFirstKey = false;
+        jsonText = jsonText + quoteJsonString(keyName) + ":" + stringifyJson(value[keyName]);
+    }
+    return jsonText + "}";
+}
+ 
+// parserState = { sourceText: the JSON text, position: index of the next character to read }
+//  Moves the reading position forward past any spaces
+function skipJsonWhitespace(parserState) {
+    while (parserState.position < parserState.sourceText.length &&
+           isSpaceCharacter(parserState.sourceText[parserState.position])) {
+        parserState.position = parserState.position + 1;
+    }
+}
+//  Reads true, false, or null from the JSON text and returns its value
+function parseJsonKeyword(parserState, keywordText, keywordValue) {
+    var charIndex;
+    for (charIndex = 0; charIndex < keywordText.length; charIndex = charIndex + 1) {
+        if (parserState.sourceText[parserState.position + charIndex] !== keywordText[charIndex]) { throw "bad json"; }
+    }
+    parserState.position = parserState.position + keywordText.length;
+    return keywordValue;
+}
+//  Reads one quoted text from the JSON text and returns it
+function parseJsonString(parserState) {
+    var parsedText = "";
+    var currentChar;
+    var escapedChar;
+    if (parserState.sourceText[parserState.position] !== "\"") { throw "bad json"; }
+    parserState.position = parserState.position + 1;
+    while (parserState.position < parserState.sourceText.length &&
+           parserState.sourceText[parserState.position] !== "\"") {
+        currentChar = parserState.sourceText[parserState.position];
+        if (currentChar === "\\") {
+            parserState.position = parserState.position + 1;
+            escapedChar = parserState.sourceText[parserState.position];
+            if (escapedChar === "n") { parsedText = parsedText + "\n"; }
+            else if (escapedChar === "r") { parsedText = parsedText + "\r"; }
+            else if (escapedChar === "t") { parsedText = parsedText + "\t"; }
+            else if (escapedChar === "\"" || escapedChar === "\\" || escapedChar === "/") { parsedText = parsedText + escapedChar; }
+            else { throw "bad json"; }
+        } else { parsedText = parsedText + currentChar; }
+        parserState.position = parserState.position + 1;
+    }
+    parserState.position = parserState.position + 1;
+    return parsedText;
+}
+//  Reads any JSON value (object, array, text, keyword, or number) from the current position
+function parseJsonValue(parserState) {
+    var firstChar;
+    var parsedObject;
+    var parsedArray;
+    var keyName;
+    var itemCount;
+    var numberText;
+    skipJsonWhitespace(parserState);
+    firstChar = parserState.sourceText[parserState.position];
+    if (firstChar === "{") {
+        parsedObject = {};
+        parserState.position = parserState.position + 1;
+        skipJsonWhitespace(parserState);
+        if (parserState.sourceText[parserState.position] === "}") { parserState.position = parserState.position + 1; return parsedObject; }
+        while (true) {
+            skipJsonWhitespace(parserState);
+            keyName = parseJsonString(parserState);
+            skipJsonWhitespace(parserState);
+            if (parserState.sourceText[parserState.position] !== ":") { throw "bad json"; }
+            parserState.position = parserState.position + 1;
+            parsedObject[keyName] = parseJsonValue(parserState);
+            skipJsonWhitespace(parserState);
+            if (parserState.sourceText[parserState.position] === ",") { parserState.position = parserState.position + 1; }
+            else if (parserState.sourceText[parserState.position] === "}") { parserState.position = parserState.position + 1; return parsedObject; }
+            else { throw "bad json"; }
+        }
+    }
+    if (firstChar === "[") {
+        parsedArray = [];
+        itemCount = 0;
+        parserState.position = parserState.position + 1;
+        skipJsonWhitespace(parserState);
+        if (parserState.sourceText[parserState.position] === "]") { parserState.position = parserState.position + 1; return parsedArray; }
+        while (true) {
+            parsedArray[itemCount] = parseJsonValue(parserState);
+            itemCount = itemCount + 1;
+            skipJsonWhitespace(parserState);
+            if (parserState.sourceText[parserState.position] === ",") { parserState.position = parserState.position + 1; }
+            else if (parserState.sourceText[parserState.position] === "]") { parserState.position = parserState.position + 1; return parsedArray; }
+            else { throw "bad json"; }
+        }
+    }
+    if (firstChar === "\"") { return parseJsonString(parserState); }
+    if (firstChar === "t") { return parseJsonKeyword(parserState, "true", true); }
+    if (firstChar === "f") { return parseJsonKeyword(parserState, "false", false); }
+    if (firstChar === "n") { return parseJsonKeyword(parserState, "null", null); }
+    numberText = "";
+    while (parserState.position < parserState.sourceText.length &&
+           (parserState.sourceText[parserState.position] === "-" || parserState.sourceText[parserState.position] === "+" ||
+            parserState.sourceText[parserState.position] === "." || parserState.sourceText[parserState.position] === "e" ||
+            parserState.sourceText[parserState.position] === "E" ||
+            (parserState.sourceText[parserState.position] >= "0" && parserState.sourceText[parserState.position] <= "9"))) {
+        numberText = numberText + parserState.sourceText[parserState.position];
+        parserState.position = parserState.position + 1;
+    }
+    if (numberText === "") { throw "bad json"; }
+    return Number(numberText);
+}
+//  Turns JSON text back into a value. Throws an error if the text is not valid JSON
+function parseJson(jsonText) {
+    var parserState = { sourceText: String(jsonText), position: 0 };
+    var parsedValue = parseJsonValue(parserState);
+    skipJsonWhitespace(parserState);
+    if (parserState.position < parserState.sourceText.length) { throw "bad json"; }
+    return parsedValue;
+}
+ 
+/* ---- dates and money ---- */
+//  Adds a zero in front of a number that has one digit (5 becomes 05)
+function padTwoDigits(numberValue) { return numberValue < 10 ? "0" + numberValue : String(numberValue); }
+//  Turns a time in milliseconds into an ISO date text (uses today if no value is given)
+function millisecondsToIsoString(millisecondsValue) {
+    var dateObject;
+    var millisecondsPart;
+    if (millisecondsValue === undefined) { millisecondsValue = new Date().getTime(); }
+    dateObject = new Date(millisecondsValue);
+    millisecondsPart = dateObject.getUTCMilliseconds();
+    return dateObject.getUTCFullYear() + "-" + padTwoDigits(dateObject.getUTCMonth() + 1) + "-" +
+        padTwoDigits(dateObject.getUTCDate()) + "T" + padTwoDigits(dateObject.getUTCHours()) + ":" +
+        padTwoDigits(dateObject.getUTCMinutes()) + ":" + padTwoDigits(dateObject.getUTCSeconds()) + "." +
+        (millisecondsPart < 10 ? "00" + millisecondsPart : (millisecondsPart < 100 ? "0" + millisecondsPart : String(millisecondsPart))) + "Z";
+}
+//  Turns an ISO date text back into milliseconds. Returns NaN if the text is too short
+function isoStringToMilliseconds(isoText) {
+    var yearNumber;
+    var monthNumber;
+    var dayNumber;
+    var adjustedYear;
+    var eraNumber;
+    var yearOfEra;
+    var dayOfYear;
+    var dayOfEra;
+    var millisecondsPart = 0;
+    if (typeof isoText !== "string" || isoText.length < 19) { return NOT_A_NUMBER; }
+    yearNumber = Number(copySubstring(isoText, 0, 4));
+    monthNumber = Number(copySubstring(isoText, 5, 7));
+    dayNumber = Number(copySubstring(isoText, 8, 10));
+    if (isoText.length >= 23 && isoText[19] === ".") { millisecondsPart = Number(copySubstring(isoText, 20, 23)); }
+    adjustedYear = monthNumber <= 2 ? yearNumber - 1 : yearNumber;
+    eraNumber = floorNumber(adjustedYear / 400);
+    yearOfEra = adjustedYear - eraNumber * 400;
+    dayOfYear = floorNumber((153 * (monthNumber > 2 ? monthNumber - 3 : monthNumber + 9) + 2) / 5) + dayNumber - 1;
+    dayOfEra = yearOfEra * 365 + floorNumber(yearOfEra / 4) - floorNumber(yearOfEra / 100) + dayOfYear;
+    return (eraNumber * 146097 + dayOfEra - 719468) * 86400000 +
+        Number(copySubstring(isoText, 11, 13)) * 3600000 + Number(copySubstring(isoText, 14, 16)) * 60000 +
+        Number(copySubstring(isoText, 17, 19)) * 1000 + millisecondsPart;
+}
+//  Shows an ISO date as a friendly text, like Oct 1, 3:05 PM
+function formatTimestamp(isoText) {
+    var dateObject = new Date(isoStringToMilliseconds(isoText));
+    var hourNumber = dateObject.getHours();
+    var meridiemText = hourNumber >= 12 ? "PM" : "AM";
+    hourNumber = hourNumber % 12;
+    if (hourNumber === 0) { hourNumber = 12; }
+    return MONTH_ABBREVIATIONS[dateObject.getMonth()] + " " + dateObject.getDate() + ", " + hourNumber + ":" +
+        padTwoDigits(dateObject.getMinutes()) + " " + meridiemText;
+}
+//  Shows a number as pesos with commas, like ₱1,250.50
+function formatPeso(amountNumber) {
+    var isNegative = amountNumber < 0;
+    var totalCents;
+    var wholePesos;
+    var centsPart;
+    var digitsText;
+    var groupedText = "";
+    var digitIndex;
+    if (isNegative) { amountNumber = -amountNumber; }
+    totalCents = roundNumber(amountNumber * 100);
+    wholePesos = floorNumber(totalCents / 100);
+    centsPart = totalCents - wholePesos * 100;
+    digitsText = String(wholePesos);
+    for (digitIndex = 0; digitIndex < digitsText.length; digitIndex = digitIndex + 1) {
+        if (digitIndex > 0 && (digitsText.length - digitIndex) % 3 === 0) { groupedText = groupedText + ","; }
+        groupedText = groupedText + digitsText[digitIndex];
+    }
+    if (centsPart > 0) { groupedText = groupedText + "." + (centsPart % 10 === 0 ? String(centsPart / 10) : padTwoDigits(centsPart)); }
+    return (isNegative ? "-" : "") + "\u20B1" + groupedText;
+}
+
+
+// MODULE 4 — FILE HANDLING & DISPOSAL
+//
+// Aligned to SCHEMA_AND_MODULE_MAP.md + constants.txt:
+//   - Order file fields read/written here: fileName, fileChannel, fileDisposed,
+//     dateDisposed (schema section 3, "File submission").
+//   - Channels come from ORDER_CHANNELS only — no retyped channel strings.
+//   - Order status values come from ORDER_STATUS only (auto-disposal fires on
+//     ORDER_STATUS.DONE per Module 4 spec in Part II).
+//   - Naming rules: camelCase fields, *Id suffix, date* ISO 8601 prefixes.
+
+
+/* --------------------------------------------------------------------------
+   1. SHARED CONSTANTS (constants.txt) — copied verbatim, no retyped strings
+   -------------------------------------------------------------------------- */
+
+// Q6 — how customers submit files. CUSTOMER_PORTAL is added by Module 14;
+// Module 4 (staff intake) uses only these four source channels.
+var ORDER_CHANNELS = {
+    MESSENGER: "Messenger",
+    EMAIL: "Email",
+    IN_PERSON: "In Person",
+    BLUETOOTH: "Bluetooth",
+    CUSTOMER_PORTAL: "Customer Portal"
+};
+
+// Order lifecycle states (Q9, Q32).
+var ORDER_STATUS = {
+    QUEUED: "queued",
+    PRINTING: "printing",
+    DONE: "done",
+    UNCLAIMED: "unclaimed",       // Q32 — customer didn't show up
+    CANCELLED: "cancelled"        // Q32 — e.g. cancelled classes
+};
+
+// Module 15 — notification types for staff alerts.
+var NOTIFICATION_TYPES = {
+    UNCLAIMED_ORDER: "UnclaimedOrder",
+    LOW_STOCK: "LowStock"
+};
+
+// Module 15 — days after dateCompleted before an order counts as "unclaimed
+// enough to alert on." Placeholder — confirm the real threshold with the client.
+var UNCLAIMED_THRESHOLD_DAYS = 3;
+
+// The three statuses Module 4 lets staff move a linked order through.
+// Queue order matches the schema lifecycle: queued -> printing -> done.
+var ORDER_STATUS_LIST = [
+    ORDER_STATUS.QUEUED,
+    ORDER_STATUS.PRINTING,
+    ORDER_STATUS.DONE
+];
+
+
+/* --------------------------------------------------------------------------
+   1b. MODULE-LOCAL CONSTANTS — not covered by constants.txt; per the naming
+       rules these follow the same "define once, never retype" pattern.
+   -------------------------------------------------------------------------- */
+
+// possible validation outcomes
+var VALIDATION_RESULTS = {
+    VALID: "Valid",
+    MISSING: "Missing",
+    CORRUPTED: "Corrupted"
+};
+
+// who triggered disposal
+var DISPOSAL_TRIGGERS = {
+    MANUAL_STAFF: "MANUAL (Staff)",
+    AUTO_ORDER_DONE: "AUTO (Order Done)"
+};
+
+// audit trail action labels (Module 4's local audit feed; the system-wide
+// ActivityLog with ACTION_TYPES is Module 3 and lives outside this module)
+var AUDIT_ACTIONS = {
+    UPLOAD: "UPLOAD",
+    FLAG: "FLAG",
+    VALIDATE: "VALIDATE",
+    DISPOSE: "DISPOSE",
+    AUTO_DISPOSE: "AUTO-DISPOSE",
+    ORDER_DONE: "ORDER_DONE"
+};
+
+// toast style kinds
+var TOAST_KINDS = {
+    SUCCESS: "success",
+    WARNING: "warning",
+    ERROR: "error"
+};
+
+// upload size ceiling
+var MAX_FILE_BYTES = 300 * 1024 * 1024;
+
+// extensions accepted for print
+var ALLOWED_EXTENSIONS = ["pdf", "jpg", "jpeg", "png", "tiff", "tif", "docx", "doc", "ai", "psd"];
+
+// magic-byte signatures per extension
+var FILE_SIGNATURES = {
+    pdf:  [[0x25, 0x50, 0x44, 0x46]],
+    ai:   [[0x25, 0x50, 0x44, 0x46]],
+    jpg:  [[0xFF, 0xD8, 0xFF]],
+    jpeg: [[0xFF, 0xD8, 0xFF]],
+    png:  [[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]],
+    tiff: [[0x49, 0x49, 0x2A, 0x00], [0x4D, 0x4D, 0x00, 0x2A]],
+    tif:  [[0x49, 0x49, 0x2A, 0x00], [0x4D, 0x4D, 0x00, 0x2A]],
+    docx: [[0x50, 0x4B, 0x03, 0x04]],
+    doc:  [[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1]],
+    psd:  [[0x38, 0x42, 0x50, 0x53]]
+};
+
+
+/* --------------------------------------------------------------------------
+   2. MANUAL DATA STRUCTURES — no built-in push/pop/join/indexOf
+   -------------------------------------------------------------------------- */
+
+// builds an empty linked list
+function createList() {
+    return { head: null, tail: null, itemsCount: 0 };
+}
+
+// appends a node at the end
+function ListAppend(listRef, itemValue) {
+    var newNode = { value: itemValue, next: null };
+
+    if (listRef.head === null) {
+        listRef.head = newNode;
+        listRef.tail = newNode;
+    } else {
+        listRef.tail.next = newNode;
+        listRef.tail = newNode;
+    }
+
+    listRef.itemsCount = listRef.itemsCount + 1;
+}
+
+// reads a node value by ly walking from the head
+function ListGet(listRef, positionIndex) {
+    var currentNode = listRef.head;
+    var currentIndex = 0;
+
+    while (currentNode !== null) {
+        if (currentIndex === positionIndex) {
+            return currentNode.value;
+        }
+
+        currentNode = currentNode.next;
+        currentIndex = currentIndex + 1;
+    }
+
+    return undefined;
+}
+
+// current linked-list length
+function ListSize(listRef) {
+    return listRef.itemsCount;
+}
+
+// removes whitespace from both ends by inspecting each character
+function TrimText(textValue) {
+    var startIndex = 0;
+    var endIndex = textValue.length - 1;
+    var resultText = "";
+    var index;
+
+    while (startIndex <= endIndex && isWhitespaceCharacter(textValue[startIndex])) {
+        startIndex = startIndex + 1;
+    }
+    while (endIndex >= startIndex && isWhitespaceCharacter(textValue[endIndex])) {
+        endIndex = endIndex - 1;
+    }
+
+    for (index = startIndex; index <= endIndex; index = index + 1) {
+        resultText = resultText + textValue[index];
+    }
+
+    return resultText;
+}
+
+// checks the whitespace characters accepted by the form helpers
+function isWhitespaceCharacter(characterText) {
+    return characterText === " " || characterText === "\t" ||
+        characterText === "\n" || characterText === "\r" ||
+        characterText === "\f" || characterText === "\v";
+}
+
+// converts ASCII uppercase letters ly
+function LowerText(textValue) {
+    var upperLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    var lowerLetters = "abcdefghijklmnopqrstuvwxyz";
+    var resultText = "";
+    var textIndex;
+    var letterIndex;
+    var matched;
+
+    for (textIndex = 0; textIndex < textValue.length; textIndex = textIndex + 1) {
+        matched = false;
+        for (letterIndex = 0; letterIndex < upperLetters.length; letterIndex = letterIndex + 1) {
+            if (textValue[textIndex] === upperLetters[letterIndex]) {
+                resultText = resultText + lowerLetters[letterIndex];
+                matched = true;
+                break;
+            }
+        }
+        if (!matched) {
+            resultText = resultText + textValue[textIndex];
+        }
+    }
+
+    return resultText;
+}
+
+// converts ASCII lowercase letters ly
+function UpperText(textValue) {
+    var upperLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    var lowerLetters = "abcdefghijklmnopqrstuvwxyz";
+    var resultText = "";
+    var textIndex;
+    var letterIndex;
+    var matched;
+
+    for (textIndex = 0; textIndex < textValue.length; textIndex = textIndex + 1) {
+        matched = false;
+        for (letterIndex = 0; letterIndex < lowerLetters.length; letterIndex = letterIndex + 1) {
+            if (textValue[textIndex] === lowerLetters[letterIndex]) {
+                resultText = resultText + upperLetters[letterIndex];
+                matched = true;
+                break;
+            }
+        }
+        if (!matched) {
+            resultText = resultText + textValue[textIndex];
+        }
+    }
+
+    return resultText;
+}
+
+// validates the array-shaped values written by the companion pages
+function isArray(value) {
+    return value !== null && typeof value === "object" &&
+        typeof value.length === "number" && value.length >= 0 &&
+        value.length % 1 === 0;
+}
+
+// checks whether an element already has a class token
+function HasClass(element, targetClass) {
+    var classText = element.className;
+    var tokenText = "";
+    var index;
+
+    for (index = 0; index <= classText.length; index = index + 1) {
+        if (index === classText.length || isWhitespaceCharacter(classText[index])) {
+            if (tokenText === targetClass) return true;
+            tokenText = "";
+        } else {
+            tokenText = tokenText + classText[index];
+        }
+    }
+
+    return false;
+}
+
+// adds a class token using direct string construction
+function AddClass(element, newClass) {
+    if (HasClass(element, newClass)) return;
+    if (element.className !== "") element.className = element.className + " ";
+    element.className = element.className + newClass;
+}
+
+// removes a class token by rebuilding the class string
+function RemoveClass(element, targetClass) {
+    var classText = element.className;
+    var resultText = "";
+    var tokenText = "";
+    var index;
+
+    for (index = 0; index <= classText.length; index = index + 1) {
+        if (index === classText.length || isWhitespaceCharacter(classText[index])) {
+            if (tokenText !== "" && tokenText !== targetClass) {
+                if (resultText !== "") resultText = resultText + " ";
+                resultText = resultText + tokenText;
+            }
+            tokenText = "";
+        } else {
+            tokenText = tokenText + classText[index];
+        }
+    }
+
+    element.className = resultText;
+}
+
+// joins list values with a separator
+function JoinList(listRef, separatorText) {
+
+    var resultText = "";
+    var totalCount = ListSize(listRef);
+    var index;
+
+    for (index = 0; index < totalCount; index++) {
+
+        resultText = resultText + ListGet(listRef, index);
+
+        if (index < totalCount - 1) {
+            resultText = resultText + separatorText;
+        }
+
+    }
+
+    return resultText;
+
+}
+
+// builds an empty  stack
+function createStack() {
+    return { stackData: [], stackCount: 0 };
+}
+
+// pushes value onto the top
+function StackPush(stackRef, itemValue) {
+    stackRef.stackData[stackRef.stackCount] = itemValue;
+    stackRef.stackCount = stackRef.stackCount + 1;
+}
+
+// current stack size
+function StackSize(stackRef) {
+    return stackRef.stackCount;
+}
+
+// reads an item counting down from top
+function StackGetFromTop(stackRef, offsetFromTop) {
+    var actualPosition = stackRef.stackCount - 1 - offsetFromTop;
+    return stackRef.stackData[actualPosition];
+}
+
+//  text search without String.indexOf
+function TextContains(sourceText, targetText) {
+
+    if (targetText === "") {
+        return true;
+    }
+
+    if (targetText.length > sourceText.length) {
+        return false;
+    }
+
+    var startIndex;
+    var offsetIndex;
+    var matches;
+
+    for (startIndex = 0; startIndex <= sourceText.length - targetText.length; startIndex++) {
+
+        matches = true;
+
+        for (offsetIndex = 0; offsetIndex < targetText.length; offsetIndex++) {
+            if (sourceText[startIndex + offsetIndex] !== targetText[offsetIndex]) {
+                matches = false;
+                break;
+            }
+        }
+
+        if (matches) {
+            return true;
+        }
+
+    }
+
+    return false;
+
+}
+
+//  linear search on a plain array
+function arrayContainsValue(sourceArray, targetValue) {
+
+    var index;
+
+    for (index = 0; index < sourceArray.length; index++) {
+
+        if (sourceArray[index] === targetValue) {
+            return true;
+        }
+
+    }
+
+    return false;
+
+}
+
+
+/* --------------------------------------------------------------------------
+   3. STATE
+   -------------------------------------------------------------------------- */
+
+var filesList = createList();    // every submitted print file
+var auditStack = createStack();  // handling history, newest on top
+var nextFileId = 1;
+
+var lastFocusedElement = null; // restores focus after a modal closes
+
+
+/* --------------------------------------------------------------------------
+   4. ELEMENT REFERENCES
+   -------------------------------------------------------------------------- */
+
+var fileModal     = document.getElementById("file-modal");
+var viewModal     = document.getElementById("view-modal");
+var viewModalBody = document.getElementById("view-modal-body");
+var fileTableBody = document.getElementById("file-table-body");
+var auditList     = document.getElementById("audit-list");
+var toastHost     = document.getElementById("toastContainer");
+
+var orderIdInput     = document.getElementById("orderId");
+var fileChannelInput = document.getElementById("fileChannel");
+var filePicker       = document.getElementById("filePicker");
+var fileDrop         = document.getElementById("file-drop");
+var fileStatus       = document.getElementById("file-status");
+var searchInput      = document.getElementById("search-input");
+
+var pickedFile            = null;   // File chosen in the add dialog
+var pickedFileHeaderCheck = null;   // result of the automatic byte scan
+var isCheckingFile        = false;  // true while the scan runs
+
+
+/* --------------------------------------------------------------------------
+   5. TEXT & NUMBER HELPERS
+   -------------------------------------------------------------------------- */
+
+// pads a number with zeros
+function padLeft(rawValue, targetWidth) {
+
+    var textValue = String(rawValue);
+
+    while (textValue.length < targetWidth) {
+        textValue = "0" + textValue;
+    }
+
+    return textValue;
+
+}
+
+// current time as HH:MM:SS
+function nowStamp() {
+
+    var currentDate = new Date();
+
+    return padLeft(currentDate.getHours(), 2) + ":" +
+           padLeft(currentDate.getMinutes(), 2) + ":" +
+           padLeft(currentDate.getSeconds(), 2);
+
+}
+
+// today as YYYY-MM-DD
+function todayAsInputValue() {
+
+    var currentDate = new Date();
+    var yearNumber  = currentDate.getFullYear();
+    var monthNumber = currentDate.getMonth() + 1;
+    var dayNumber   = currentDate.getDate();
+
+    return yearNumber + "-" + padLeft(monthNumber, 2) + "-" + padLeft(dayNumber, 2);
+
+}
+
+// builds FILE-00N display id
+function formatFileId(fileIdNumber) {
+    return "FILE-" + padLeft(fileIdNumber, 3);
+}
+
+//  date parse, no split()
+function formatDateForDisplay(dateValueText) {
+
+    if (!dateValueText) {
+        return "—";
+    }
+
+    var yearText  = "";
+    var monthText = "";
+    var dayText   = "";
+    var partNumber = 1;
+    var charIndex;
+    var currentChar;
+
+    for (charIndex = 0; charIndex < dateValueText.length; charIndex++) {
+
+        currentChar = dateValueText[charIndex];
+
+        if (currentChar === "-") {
+            partNumber = partNumber + 1;
+        } else if (partNumber === 1) {
+            yearText = yearText + currentChar;
+        } else if (partNumber === 2) {
+            monthText = monthText + currentChar;
+        } else if (partNumber === 3) {
+            dayText = dayText + currentChar;
+        }
+
+    }
+
+    if (partNumber !== 3) {
+        return dateValueText;
+    }
+
+    var monthNames = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ];
+
+    var monthIndex = Number(monthText) - 1;
+
+    if (monthIndex < 0 || monthIndex > 11) {
+        return dateValueText;
+    }
+
+    return Number(dayText) + " " + monthNames[monthIndex] + " " + yearText;
+
+}
+
+// human-readable byte size
+function formatBytes(byteCount) {
+    var units = ["B", "KB", "MB", "GB"];
+    var unit = 0;
+    var value = byteCount;
+    var tenths;
+    while (value >= 1024 && unit < 3) { value = value / 1024; unit = unit + 1; }
+    if (unit === 0) { return String(value) + " B"; }
+    if (value >= 10) { return String(hRound(value)) + " " + units[unit]; }
+    tenths = hRound(value * 10);
+    return String(hFloor(tenths / 10)) + "." + String(tenths - hFloor(tenths / 10) * 10) + " " + units[unit];
+}
+
+// derives the drop-zone label from ALLOWED_EXTENSIONS + MAX_FILE_BYTES
+// so the UI text is never retyped (and can never disagree with the limits)
+function buildDropZoneLabel() {
+
+    var extensionList = createList();
+    var index;
+
+    for (index = 0; index < ALLOWED_EXTENSIONS.length; index++) {
+        ListAppend(extensionList, UpperText(ALLOWED_EXTENSIONS[index]));
+    }
+
+    var sizeLimitMb = MAX_FILE_BYTES / (1024 * 1024);
+
+    return "Choose print file (" + JoinList(extensionList, ", ") +
+           " — max " + sizeLimitMb + " MB)";
+
+}
+
+
+/* --------------------------------------------------------------------------
+   6. FILE EXTENSION & SIGNATURE SCAN
+   -------------------------------------------------------------------------- */
+
+//  extension extract, no lastIndexOf/slice
+function getExtension(fileNameText) {
+
+    var lastDotPosition = -1;
+    var charIndex;
+
+    for (charIndex = 0; charIndex < fileNameText.length; charIndex++) {
+
+        if (fileNameText[charIndex] === ".") {
+            lastDotPosition = charIndex;
+        }
+
+    }
+
+    if (lastDotPosition === -1 || lastDotPosition === fileNameText.length - 1) {
+        return "";
+    }
+
+    var extensionText = "";
+
+    for (charIndex = lastDotPosition + 1; charIndex < fileNameText.length; charIndex++) {
+        extensionText = extensionText + fileNameText[charIndex];
+    }
+
+    return LowerText(extensionText);
+
+}
+
+// compares bytes against a signature
+function bytesMatchSignature(byteValues, signaturePattern) {
+
+    var index;
+
+    if (byteValues.length < signaturePattern.length) {
+        return false;
+    }
+
+    for (index = 0; index < signaturePattern.length; index++) {
+
+        if (byteValues[index] !== signaturePattern[index]) {
+            return false;
+        }
+
+    }
+
+    return true;
+
+}
+
+// reads first 16 bytes, callback style
+function readFileHeaderBytes(fileToRead, onDoneCallback) {
+
+    var fileReader = new FileReader();
+
+    fileReader.onload = function (loadEvent) {
+        onDoneCallback(new Uint8Array(loadEvent.target.result));
+    };
+
+    fileReader.onerror = function () {
+        onDoneCallback(null);
+    };
+
+    fileReader.readAsArrayBuffer(fileToRead.slice(0, 16));
+
+}
+
+// automatic corruption scan by real bytes
+function checkFileHeader(fileToCheck, onDoneCallback) {
+
+    var fileExtensionText = getExtension(fileToCheck.name);
+    var knownSignatures    = FILE_SIGNATURES[fileExtensionText];
+
+    if (!knownSignatures) {
+        onDoneCallback({ headerIsValid: true, headerReasonText: "" });
+        return;
+    }
+
+    readFileHeaderBytes(fileToCheck, function (headerBytes) {
+
+        var matchFound = false;
+        var signatureIndex;
+
+        if (!headerBytes) {
+            onDoneCallback({ headerIsValid: false, headerReasonText: "Could not read file" });
+            return;
+        }
+
+        for (signatureIndex = 0; signatureIndex < knownSignatures.length; signatureIndex++) {
+
+            if (bytesMatchSignature(headerBytes, knownSignatures[signatureIndex])) {
+                matchFound = true;
+            }
+
+        }
+
+        if (!matchFound) {
+            onDoneCallback({ headerIsValid: false, headerReasonText: "Header mismatch for ." + fileExtensionText });
+            return;
+        }
+
+        onDoneCallback({ headerIsValid: true, headerReasonText: "" });
+
+    });
+
+}
+
+
+/* --------------------------------------------------------------------------
+   7. VALIDATION — flags missing, oversized, or corrupted files
+   -------------------------------------------------------------------------- */
+
+// returns validationResult + flagReasonText
+function validateFile(fileNameText, fileSizeBytes, headerCheckResult) {
+
+    if (!fileNameText) {
+        return { validationResult: VALIDATION_RESULTS.MISSING, flagReasonText: "No file attached" };
+    }
+
+    var fileExtensionText = getExtension(fileNameText);
+
+    if (!arrayContainsValue(ALLOWED_EXTENSIONS, fileExtensionText)) {
+        return { validationResult: VALIDATION_RESULTS.CORRUPTED, flagReasonText: "Unsupported file type (." + fileExtensionText + ")" };
+    }
+
+    if (fileSizeBytes === 0) {
+        return { validationResult: VALIDATION_RESULTS.CORRUPTED, flagReasonText: "File is empty" };
+    }
+
+    if (fileSizeBytes > MAX_FILE_BYTES) {
+        return { validationResult: VALIDATION_RESULTS.CORRUPTED, flagReasonText: "Exceeds " + (MAX_FILE_BYTES / (1024 * 1024)) + " MB limit" };
+    }
+
+    if (headerCheckResult && !headerCheckResult.headerIsValid) {
+        return { validationResult: VALIDATION_RESULTS.CORRUPTED, flagReasonText: headerCheckResult.headerReasonText };
+    }
+
+    return { validationResult: VALIDATION_RESULTS.VALID };
+
+}
+
+
+/* --------------------------------------------------------------------------
+   8. FEEDBACK: TOASTS, FIELD ERRORS, AUDIT LOG
+   -------------------------------------------------------------------------- */
+
+// shows a floating toast message
+function showToast(messageText, kindText) {
+
+    var toastElement = document.createElement("div");
+
+    toastElement.className = "toast";
+
+    if (kindText) {
+        toastElement.className += " toast-" + kindText;
+    }
+
+    toastElement.textContent = messageText;
+
+    toastHost.appendChild(toastElement);
+
+    window.setTimeout(function () {
+
+        if (toastElement.parentNode) {
+            toastElement.parentNode.removeChild(toastElement);
+        }
+
+    }, 3400);
+
+}
+
+function markFieldInvalid(fieldElementId) {
+    var inputElement = null;
+    var errorElement = document.getElementById(
+        hSub(fieldElementId, 6, fieldElementId.length) + "-error"
+    );
+
+    if (fieldElementId === "field-orderId") {
+        inputElement = orderIdInput;
+    } else if (fieldElementId === "field-fileChannel") {
+        inputElement = fileChannelInput;
+    } else if (fieldElementId === "field-filePicker") {
+        inputElement = fileDrop;
+    }
+
+    if (inputElement === fileDrop) {
+        hRemoveClass(inputElement, "btn-secondary");
+        hAddClass(inputElement, "btn-danger");
+    } else if (inputElement) {
+        hAddClass(inputElement, "input-invalid");
+    }
+
+    if (errorElement) {
+        errorElement.hidden = false;
+        errorElement.textContent =
+            fieldElementId === "field-orderId"
+                ? "Enter the order this file belongs to."
+                : fieldElementId === "field-fileChannel"
+                    ? "Pick how the file was received."
+                    : "Choose the print file to validate.";
+    }
+}
+
+function clearFieldErrors() {
+    hRemoveClass(orderIdInput, "input-invalid");
+    hRemoveClass(fileChannelInput, "input-invalid");
+    hRemoveClass(fileDrop, "input-invalid"); hRemoveClass(fileDrop, "btn-danger");
+    hAddClass(fileDrop, "btn-secondary");
+
+    var errorIds = ["orderId-error", "fileChannel-error", "filePicker-error"];
+    for (var i = 0; i < errorIds.length; i++) {
+        var errorElement = document.getElementById(errorIds[i]);
+        errorElement.textContent = "";
+        errorElement.hidden = true;
+    }
+}
+
+// records one audit stack entry
+function addAuditEntry(actionTypeText, detailText) {
+
+    var entryRecord = {
+        entryTime: todayAsInputValue() + " " + nowStamp(),
+        actionType: actionTypeText,
+        detailText: detailText
+    };
+
+    StackPush(auditStack, entryRecord);
+
+    renderAuditLog();
+
+}
+
+// draws the audit log, newest first
+function renderAuditLog() {
+
+    auditList.textContent = "";
+
+    var totalCount = StackSize(auditStack);
+
+    if (totalCount === 0) {
+        var emptyItem = document.createElement("li");
+        emptyItem.className = "activity-item";
+        emptyItem.textContent = "No actions recorded yet.";
+        auditList.appendChild(emptyItem);
+        return;
+    }
+
+    var offsetIndex;
+
+    for (offsetIndex = 0; offsetIndex < totalCount; offsetIndex++) {
+        auditList.appendChild(buildAuditItem(StackGetFromTop(auditStack, offsetIndex)));
+    }
+
+}
+
+// builds one audit list row
+function buildAuditItem(entryRecord) {
+
+    var itemElement = document.createElement("li");
+    itemElement.className = "activity-item";
+
+    var actionSpan = document.createElement("span");
+    actionSpan.className = "badge badge-role";
+    actionSpan.textContent = entryRecord.actionType;
+
+    var detailSpan = document.createElement("span");
+    detailSpan.className = "activity-text";
+    detailSpan.textContent = entryRecord.detailText;
+
+    var timeSpan = document.createElement("span");
+    timeSpan.className = "activity-time";
+    timeSpan.textContent = entryRecord.entryTime;
+
+    itemElement.appendChild(actionSpan);
+    itemElement.appendChild(detailSpan);
+    itemElement.appendChild(timeSpan);
+
+    return itemElement;
+
+}
+
+
+/* --------------------------------------------------------------------------
+   9. ADD FILE MODAL
+   -------------------------------------------------------------------------- */
+
+// populates the channel dropdown from ORDER_CHANNELS (no hardcoded options)
+function getOrderSnapshot() {
+    try {
+        var orders = hJsonParse(localStorage.getItem("gsj_orders_snapshot") || "[]");
+        return hIsArray(orders) ? orders : [];
+    } catch (error) {
+        return [];
+    }
+}
+
+// Show files submitted by Order Maker from the shared order snapshot.
+function syncFilesFromOrders() {
+    var orders = getOrderSnapshot();
+    var orderIndex;
+    for (orderIndex = 0; orderIndex < orders.length; orderIndex++) {
+        var order = orders[orderIndex];
+        var orderFiles = order.files || order.fileNames;
+        if (!orderFiles || typeof orderFiles.length !== "number") {
+            orderFiles = order.fileName ? [order.fileName] : [];
+        }
+        for (var fileIndex = 0; fileIndex < orderFiles.length; fileIndex++) {
+            var source = orderFiles[fileIndex];
+            var fileName = typeof source === "string" ? source : source && (source.name || source.fileName);
+            if (!fileName) continue;
+            var found = false;
+            for (var currentIndex = 0; currentIndex < ListSize(filesList); currentIndex++) {
+                var current = ListGet(filesList, currentIndex);
+                if (Number(current.orderId) === Number(order.orderId) && current.fileName === fileName) {
+                    found = true;
+                    break;
+                }
+            }
+            if (found) continue;
+            ListAppend(filesList, {
+                fileId: nextFileId++, orderId: Number(order.orderId), fileName: fileName,
+                fileChannel: order.fileChannel || ORDER_CHANNELS.CUSTOMER_PORTAL,
+                fileSize: source && source.size ? source.size : 0,
+                dateAdded: order.dateAdded || order.createdAt || todayAsInputValue(),
+                validationResult: VALIDATION_RESULTS.VALID, flagReasonText: "",
+                status: order.status || ORDER_STATUS.QUEUED,
+                fileDisposed: false, dateDisposed: "", disposedBy: "", sourceFile: null
+            });
+        }
+    }
+}
+
+function syncOrderFileFields(orderId) {
+    var orders = getOrderSnapshot();
+    var linkedOrder = null;
+    var latestFile = null;
+    var fileCount = 0;
+    var activeFileCount = 0;
+    var latestDisposedDate = "";
+    var orderIndex;
+    var fileIndex;
+
+    for (orderIndex = 0; orderIndex < orders.length; orderIndex++) {
+        if (Number(orders[orderIndex].orderId) === Number(orderId)) {
+            linkedOrder = orders[orderIndex];
+            break;
+        }
+    }
+
+    if (!linkedOrder) return;
+
+    for (fileIndex = 0; fileIndex < ListSize(filesList); fileIndex++) {
+        var fileRecord = ListGet(filesList, fileIndex);
+
+        if (Number(fileRecord.orderId) !== Number(orderId)) continue;
+
+        fileCount++;
+        latestFile = fileRecord;
+
+        if (fileRecord.fileDisposed) {
+            latestDisposedDate = fileRecord.dateDisposed;
+        } else {
+            activeFileCount++;
+        }
+    }
+
+    linkedOrder.fileName = latestFile ? latestFile.fileName : null;
+    linkedOrder.fileCount = fileCount;
+    linkedOrder.fileDisposed = fileCount > 0 && activeFileCount === 0;
+    linkedOrder.dateDisposed = linkedOrder.fileDisposed ? latestDisposedDate : null;
+    linkedOrder.fileValidationResult = latestFile ? latestFile.validationResult : null;
+    linkedOrder.fileFlagReasonText = latestFile ? (latestFile.flagReasonText || "") : "";
+
+    try {
+        localStorage.setItem("gsj_orders_snapshot", hJsonStringify(orders));
+    } catch (error) {
+        showToast("Could not sync file details to Order Management.", TOAST_KINDS.ERROR);
+    }
+}
+
+function getSelectedOrder() {
+    var orders = getOrderSnapshot();
+    var index;
+
+    for (index = 0; index < orders.length; index++) {
+        if (String(orders[index].orderId) === orderIdInput.value) {
+            return orders[index];
+        }
+    }
+
+    return null;
+}
+
+function updateSelectedOrderChannel() {
+    var order = getSelectedOrder();
+    fileChannelInput.value = order && order.fileChannel ? order.fileChannel : "";
+}
+
+// populates the channel dropdown from ORDER_CHANNELS
+function populateChannelSelect() {
+
+    fileChannelInput.textContent = "";
+
+    var placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Select a channel...";
+    fileChannelInput.appendChild(placeholder);
+
+    var channelKey;
+
+    for (channelKey in ORDER_CHANNELS) {
+        if (true) {
+            var option = document.createElement("option");
+            option.value = ORDER_CHANNELS[channelKey];
+            option.textContent = ORDER_CHANNELS[channelKey];
+            fileChannelInput.appendChild(option);
+        }
+    }
+
+}
+
+function populateOrderSelect() {
+    var previousValue = orderIdInput.value;
+    var orders = getOrderSnapshot();
+    var availableOrders = createList();
+    var index;
+
+    orderIdInput.textContent = "";
+
+    for (index = 0; index < orders.length; index++) {
+        var status = orders[index].status;
+
+        if (
+            status !== ORDER_STATUS.DONE &&
+            status !== ORDER_STATUS.UNCLAIMED &&
+            status !== ORDER_STATUS.CANCELLED
+        ) {
+            ListAppend(availableOrders, orders[index]);
+        }
+    }
+
+    if (ListSize(availableOrders) === 0) {
+        var emptyOption = document.createElement("option");
+        emptyOption.value = "";
+        emptyOption.textContent = "No orders available";
+        orderIdInput.appendChild(emptyOption);
+        fileChannelInput.value = "";
+        return;
+    }
+
+    var placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Select an order...";
+    orderIdInput.appendChild(placeholder);
+
+    for (index = 0; index < ListSize(availableOrders); index++) {
+        var order = ListGet(availableOrders, index);
+        var option = document.createElement("option");
+        option.value = String(order.orderId);
+        option.textContent = "ORD-" + padLeft(order.orderId, 4) +
+            (order.customerName ? " — " + order.customerName : "");
+        orderIdInput.appendChild(option);
+    }
+
+    orderIdInput.value = previousValue;
+    updateSelectedOrderChannel();
+}
+
+// opens the add-file dialog
+function openFileModal() {
+
+    lastFocusedElement = document.activeElement;
+
+    clearForm();
+
+    fileModal.hidden = false;
+    hAddClass(fileModal, "open");
+
+    orderIdInput.focus();
+
+}
+
+// closes the add-file dialog
+function closeFileModal() {
+
+    fileModal.hidden = true;
+    hRemoveClass(fileModal, "open");
+
+    clearForm();
+
+    if (lastFocusedElement) {
+        lastFocusedElement.focus();
+    }
+
+}
+
+// resets the drop-zone text
+function resetFileDropUI() {
+
+    hRemoveClass(fileDrop, "btn-success");
+    hRemoveClass(fileDrop, "btn-danger");
+    hAddClass(fileDrop, "btn-secondary");
+    fileDrop.textContent = buildDropZoneLabel();
+    fileStatus.textContent = "No file selected.";
+
+}
+
+// clears the whole add form
+function clearForm() {
+
+    orderIdInput.value = "";
+    fileChannelInput.value = "";
+
+    pickedFile = null;
+    pickedFileHeaderCheck = null;
+    isCheckingFile = false;
+
+    filePicker.value = "";
+    resetFileDropUI();
+
+    clearFieldErrors();
+
+}
+
+
+/* --------------------------------------------------------------------------
+   10. SAVING — stores an automatically-validated file
+   -------------------------------------------------------------------------- */
+
+// validates inputs, appends new file record
+function saveFile() {
+
+    clearFieldErrors();
+
+var orderIdText = orderIdInput.value;
+var linkedOrder = getSelectedOrder();
+var fileChannelText = fileChannelInput.value;
+
+    var firstInvalidInput = null;
+
+if (!linkedOrder || orderIdText === "") {
+    markFieldInvalid("field-orderId");
+    firstInvalidInput = firstInvalidInput || orderIdInput;
+}
+
+    if (fileChannelText === "") {
+        markFieldInvalid("field-fileChannel");
+        firstInvalidInput = firstInvalidInput || fileChannelInput;
+    }
+
+    if (!pickedFile) {
+        markFieldInvalid("field-filePicker");
+        firstInvalidInput = firstInvalidInput || fileDrop;
+    }
+
+    if (firstInvalidInput) {
+        firstInvalidInput.focus();
+        return;
+    }
+
+    if (isCheckingFile) {
+        showToast("Still scanning file, wait please", TOAST_KINDS.WARNING);
+        return;
+    }
+
+    var validationCheckResult = validateFile(pickedFile.name, pickedFile.size, pickedFileHeaderCheck);
+
+    // field names mirror the Order schema's file-submission block:
+    // orderId, fileName, fileChannel, fileDisposed, dateDisposed, dateAdded
+    var newFileRecord = {
+        fileId: nextFileId,
+        orderId: Number(orderIdText),
+        fileName: pickedFile.name,
+        fileChannel: fileChannelText,
+        fileSize: pickedFile.size,
+        dateAdded: todayAsInputValue(),
+        validationResult: validationCheckResult.validationResult,
+        flagReasonText: validationCheckResult.flagReasonText,
+        status: ORDER_STATUS.QUEUED,
+        fileDisposed: false,
+        dateDisposed: "",
+        disposedBy: "",
+        sourceFile: pickedFile
+    };
+
+    nextFileId = nextFileId + 1;
+
+    ListAppend(filesList, newFileRecord);
+    syncOrderFileFields(newFileRecord.orderId);
+
+    addAuditEntry(AUDIT_ACTIONS.UPLOAD, formatFileId(newFileRecord.fileId) + " (" + pickedFile.name +
+        ") received via " + fileChannelText + " for " + orderIdText);
+
+    if (validationCheckResult.validationResult !== VALIDATION_RESULTS.VALID) {
+        addAuditEntry(AUDIT_ACTIONS.FLAG, formatFileId(newFileRecord.fileId) + " flagged as " +
+            validationCheckResult.validationResult + ": " + validationCheckResult.flagReasonText);
+    }
+
+    renderTable();
+    renderStats();
+
+    closeFileModal();
+
+    if (validationCheckResult.validationResult === VALIDATION_RESULTS.VALID) {
+        showToast(newFileRecord.fileName + " validated, ready to print", TOAST_KINDS.SUCCESS);
+    } else {
+        showToast("File flagged: " + validationCheckResult.flagReasonText, TOAST_KINDS.WARNING);
+    }
+
+}
+
+
+/* --------------------------------------------------------------------------
+   11. RE-VALIDATION & DISPOSAL
+   -------------------------------------------------------------------------- */
+
+// linear search by fileId
+function findFile(targetFileId) {
+
+    var totalCount = ListSize(filesList);
+    var index;
+
+    for (index = 0; index < totalCount; index++) {
+
+        var currentFile = ListGet(filesList, index);
+
+        if (currentFile.fileId === targetFileId) {
+            return currentFile;
+        }
+
+    }
+
+    return null;
+
+}
+
+// re-runs validation on demand
+function revalidateFile(targetFileId) {
+
+    var targetFile = findFile(targetFileId);
+
+    if (!targetFile) {
+        return;
+    }
+
+    if (targetFile.sourceFile && targetFile.sourceFile.name === targetFile.fileName) {
+
+        checkFileHeader(targetFile.sourceFile, function (headerCheckResult) {
+
+            var validationCheckResult = validateFile(
+                targetFile.fileName,
+                targetFile.fileSize,
+                headerCheckResult
+            );
+
+            targetFile.validationResult = validationCheckResult.validationResult;
+            targetFile.flagReasonText = validationCheckResult.flagReasonText;
+
+            addAuditEntry(AUDIT_ACTIONS.VALIDATE, formatFileId(targetFile.fileId) + " re-validated: " +
+                validationCheckResult.validationResult + " — " + validationCheckResult.flagReasonText);
+
+            renderTable();
+            renderStats();
+
+            if (validationCheckResult.validationResult === VALIDATION_RESULTS.VALID) {
+                showToast(targetFile.fileName + " passed re-check", TOAST_KINDS.SUCCESS);
+            } else {
+                showToast("Still flagged: " + validationCheckResult.flagReasonText, TOAST_KINDS.WARNING);
+            }
+
+        });
+
+    } else {
+
+        var metadataValidation = validateFile(targetFile.fileName, targetFile.fileSize, null);
+        targetFile.validationResult = metadataValidation.validationResult;
+        targetFile.flagReasonText = metadataValidation.flagReasonText + " (file bytes unavailable for this session)";
+
+        addAuditEntry(AUDIT_ACTIONS.VALIDATE, formatFileId(targetFile.fileId) + " re-validated from metadata: " +
+            metadataValidation.validationResult);
+
+        renderTable();
+        renderStats();
+        showToast("Re-check used saved file metadata only", TOAST_KINDS.WARNING);
+
+    }
+
+}
+
+// permanent disposal,  or auto
+function disposeFile(targetFileId, triggeredByText) {
+
+    var targetFile = findFile(targetFileId);
+
+    if (!targetFile || targetFile.fileDisposed) {
+        return;
+    }
+
+    targetFile.fileDisposed = true;
+    targetFile.dateDisposed = todayAsInputValue() + " " + nowStamp();
+    targetFile.disposedBy = triggeredByText;
+    targetFile.sourceFile = null;
+    syncOrderFileFields(targetFile.orderId);
+
+    var auditActionType = triggeredByText === DISPOSAL_TRIGGERS.AUTO_ORDER_DONE ?
+        AUDIT_ACTIONS.AUTO_DISPOSE : AUDIT_ACTIONS.DISPOSE;
+
+    addAuditEntry(auditActionType, formatFileId(targetFile.fileId) + " (" + targetFile.fileName +
+        ") disposed for " + targetFile.orderId + " — removed from storage. Trigger: " + triggeredByText);
+
+    renderTable();
+    renderStats();
+
+    showToast("File disposed; in-memory file reference released", TOAST_KINDS.WARNING);
+
+}
+
+
+/* --------------------------------------------------------------------------
+   12. ORDER STATUS — DONE triggers auto-disposal (schema: Module 4 spec)
+   -------------------------------------------------------------------------- */
+
+// updates linked order status
+function setOrderStatus(targetFileId, newStatusText) {
+
+    var targetFile = findFile(targetFileId);
+
+    if (!targetFile || targetFile.fileDisposed) {
+        return;
+    }
+
+    targetFile.status = newStatusText;
+
+    addAuditEntry(AUDIT_ACTIONS.ORDER_DONE, targetFile.orderId + " moved to " + newStatusText +
+        " (linked to " + formatFileId(targetFile.fileId) + ")");
+
+    // auto-dispose stored files once Order.status === ORDER_STATUS.DONE
+    if (newStatusText === ORDER_STATUS.DONE) {
+        disposeFile(targetFileId, DISPOSAL_TRIGGERS.AUTO_ORDER_DONE);
+        return;
+    }
+
+    renderTable();
+    renderStats();
+
+}
+
+
+/* --------------------------------------------------------------------------
+   13. TABLE RENDERING
+   -------------------------------------------------------------------------- */
+
+// redraws the whole file table
+function renderTable() {
+
+    fileTableBody.textContent = "";
+
+    var visibleFilesList = filterFiles();
+    var totalCount = ListSize(visibleFilesList);
+
+    if (totalCount === 0) {
+        fileTableBody.appendChild(buildEmptyRow());
+        return;
+    }
+
+    var index;
+
+    for (index = 0; index < totalCount; index++) {
+        fileTableBody.appendChild(buildFileRow(ListGet(visibleFilesList, index)));
+    }
+
+}
+
+//  search filter, returns a list
+function filterFiles() {
+
+    var queryText  = hLower(hTrim(searchInput.value));
+    var resultList = createList();
+    var totalCount = ListSize(filesList);
+    var index;
+
+    for (index = 0; index < totalCount; index++) {
+
+        var currentFile = ListGet(filesList, index);
+
+        if (queryText === "") {
+            ListAppend(resultList, currentFile);
+            continue;
+        }
+
+        var haystackText = hLower((
+            formatFileId(currentFile.fileId) + " " +
+            currentFile.orderId + " " +
+            currentFile.fileName + " " +
+            currentFile.fileChannel + " " +
+            currentFile.validationResult + " " +
+            currentFile.status
+        ));
+
+        if (TextContains(haystackText, queryText)) {
+            ListAppend(resultList, currentFile);
+        }
+
+    }
+
+    return resultList;
+
+}
+
+// placeholder row for an empty table
+function buildEmptyRow() {
+
+    var emptyRow = document.createElement("tr");
+    emptyRow.className = "empty-row";
+
+    var emptyCell = document.createElement("td");
+    emptyCell.colSpan = 8;
+    emptyCell.textContent = "No print files yet. Add one to validate it for printing.";
+
+    emptyRow.appendChild(emptyCell);
+
+    return emptyRow;
+
+}
+
+// builds one file table row
+function buildFileRow(fileRecord) {
+
+    var fileRow = document.createElement("tr");
+
+    if (fileRecord.fileDisposed) {
+        fileRow.style.opacity = "0.5";
+    }
+
+    var fileIdCell = document.createElement("td");
+    fileIdCell.className = "id-cell";
+    fileIdCell.setAttribute("data-label", "File ID");
+    fileIdCell.textContent = formatFileId(fileRecord.fileId);
+    fileRow.appendChild(fileIdCell);
+
+    fileRow.appendChild(buildTextCell(fileRecord.orderId, "Linked order"));
+
+    var nameCell = document.createElement("td");
+    nameCell.className = "file-name-cell";
+    nameCell.setAttribute("data-label", "File name");
+    nameCell.textContent = fileRecord.fileName;
+    nameCell.title = fileRecord.fileName;
+    fileRow.appendChild(nameCell);
+
+    var channelCell = document.createElement("td");
+    channelCell.setAttribute("data-label", "Channel");
+    var channelBadge = document.createElement("span");
+    channelBadge.className = "badge badge-role";
+    channelBadge.textContent = fileRecord.fileChannel;
+    channelCell.appendChild(channelBadge);
+    fileRow.appendChild(channelCell);
+
+    fileRow.appendChild(buildTextCell(formatBytes(fileRecord.fileSize), "Size"));
+
+    var validationCell = buildValidationCell(fileRecord);
+    validationCell.setAttribute("data-label", "Validation");
+    fileRow.appendChild(validationCell);
+
+    var statusCell = buildOrderStatusCell(fileRecord);
+    statusCell.setAttribute("data-label", "Order status");
+    fileRow.appendChild(statusCell);
+
+    var actionsCell = buildActionsCell(fileRecord);
+    actionsCell.setAttribute("data-label", "Actions");
+    fileRow.appendChild(actionsCell);
+
+    return fileRow;
+
+}
+
+// builds the validation badge cell
+function buildValidationCell(fileRecord) {
+
+    var cellElement = document.createElement("td");
+    var badgeElement = document.createElement("span");
+    var isValid = fileRecord.validationResult === VALIDATION_RESULTS.VALID;
+
+    badgeElement.className = "badge " + (isValid ? "badge-success" : "badge-danger");
+    badgeElement.textContent = fileRecord.fileDisposed ? "Disposed" : fileRecord.validationResult;
+    badgeElement.title = fileRecord.flagReasonText || "File passed validation";
+    cellElement.appendChild(badgeElement);
+
+    return cellElement;
+}
+
+// builds the validation badge cell
+function buildOrderStatusCell(fileRecord) {
+    var cellElement = document.createElement("td");
+    var linkedOrder = getSelectedOrderForId(fileRecord.orderId);
+
+    cellElement.textContent = linkedOrder ? linkedOrder.status : "Order unavailable";
+    return cellElement;
+}
+
+function getSelectedOrderForId(orderId) {
+    var orders = getOrderSnapshot();
+
+    for (var index = 0; index < orders.length; index++) {
+        if (Number(orders[index].orderId) === Number(orderId)) {
+            return orders[index];
+        }
+    }
+
+    return null;
+}
+
+// builds the row-action buttons cell
+function buildActionsCell(fileRecord) {
+
+    var actionsCell = document.createElement("td");
+    actionsCell.className = "row-actions";
+    actionsCell.style.display = "flex";
+    actionsCell.style.flexWrap = "nowrap";
+    actionsCell.style.alignItems = "center";
+    actionsCell.style.gap = "6px";
+
+    var viewButton = document.createElement("button");
+    viewButton.type = "button";
+    viewButton.className = "btn btn-secondary btn-small";
+    viewButton.textContent = "View";
+    viewButton.style.whiteSpace = "nowrap";
+    viewButton.style.flexShrink = "0";
+
+    viewButton.addEventListener("click", function () {
+        openViewModal(fileRecord.fileId);
+    });
+
+    actionsCell.appendChild(viewButton);
+
+    if (!fileRecord.fileDisposed) {
+
+        var revalidateButton = document.createElement("button");
+        revalidateButton.type = "button";
+        revalidateButton.className = "btn btn-secondary btn-small";
+        revalidateButton.textContent = "Re-check";
+        revalidateButton.style.whiteSpace = "nowrap";
+        revalidateButton.style.flexShrink = "0";
+
+        revalidateButton.addEventListener("click", function () {
+            revalidateFile(fileRecord.fileId);
+        });
+
+        actionsCell.appendChild(revalidateButton);
+
+        var disposeButton = document.createElement("button");
+        disposeButton.type = "button";
+        disposeButton.className = "btn btn-danger btn-small";
+        disposeButton.textContent = "Dispose";
+        disposeButton.style.whiteSpace = "nowrap";
+        disposeButton.style.flexShrink = "0";
+
+        disposeButton.addEventListener("click", function () {
+            disposeFile(fileRecord.fileId, DISPOSAL_TRIGGERS.MANUAL_STAFF);
+        });
+
+        actionsCell.appendChild(disposeButton);
+
+    }
+
+    return actionsCell;
+
+}
+
+// builds a plain text cell
+function buildTextCell(cellValueText, labelText) {
+
+    var textCell = document.createElement("td");
+    textCell.setAttribute("data-label", labelText || "Value");
+    textCell.textContent = cellValueText === "" ? "—" : cellValueText;
+
+    return textCell;
+
+}
+
+
+/* --------------------------------------------------------------------------
+   14. SUMMARY STATS
+   -------------------------------------------------------------------------- */
+
+// recomputes the four stat cards
+function renderStats() {
+
+    var totalCount    = ListSize(filesList);
+    var validCount    = 0;
+    var flaggedCount  = 0;
+    var disposedCount = 0;
+    var index;
+
+    for (index = 0; index < totalCount; index++) {
+
+        var currentFile = ListGet(filesList, index);
+
+        if (currentFile.fileDisposed) {
+            disposedCount = disposedCount + 1;
+        } else if (currentFile.validationResult === VALIDATION_RESULTS.VALID) {
+            validCount = validCount + 1;
+        } else {
+            flaggedCount = flaggedCount + 1;
+        }
+
+    }
+
+    document.getElementById("stat-total").textContent    = totalCount;
+    document.getElementById("stat-valid").textContent    = validCount;
+    document.getElementById("stat-flagged").textContent  = flaggedCount;
+    document.getElementById("stat-disposed").textContent = disposedCount;
+
+}
+
+
+/* --------------------------------------------------------------------------
+   15. VIEW MODAL
+   -------------------------------------------------------------------------- */
+
+// opens the file-details dialog
+function openViewModal(targetFileId) {
+
+    var targetFile = findFile(targetFileId);
+
+    if (!targetFile) {
+        return;
+    }
+
+    lastFocusedElement = document.activeElement;
+
+    viewModalBody.textContent = "";
+    viewModalBody.appendChild(buildDetailGrid(targetFile));
+
+    viewModal.hidden = false;
+    hAddClass(viewModal, "open");
+
+    document.getElementById("view-modal-close").focus();
+
+}
+
+// closes the file-details dialog
+function closeViewModal() {
+
+    viewModal.hidden = true;
+    hRemoveClass(viewModal, "open");
+
+    if (lastFocusedElement) {
+        lastFocusedElement.focus();
+    }
+
+}
+
+// builds the details grid
+function buildDetailGrid(fileRecord) {
+
+    var gridElement = document.createElement("div");
+    gridElement.className = "profile-list";
+
+    gridElement.appendChild(buildDetailItem("File ID", formatFileId(fileRecord.fileId)));
+    gridElement.appendChild(buildDetailItem("Linked order", fileRecord.orderId));
+    gridElement.appendChild(buildDetailItem("File name", fileRecord.fileName, true));
+    gridElement.appendChild(buildDetailItem("Received via", fileRecord.fileChannel));
+    gridElement.appendChild(buildDetailItem("File size", formatBytes(fileRecord.fileSize)));
+    gridElement.appendChild(buildDetailItem("Uploaded on", formatDateForDisplay(fileRecord.dateAdded)));
+
+    if (fileRecord.fileDisposed) {
+        gridElement.appendChild(buildDetailItem("Status", "Disposed"));
+        gridElement.appendChild(buildDetailItem("Disposed on", fileRecord.dateDisposed));
+        gridElement.appendChild(buildDetailItem("Disposed by", fileRecord.disposedBy, true));
+    } else {
+        gridElement.appendChild(buildDetailItem("Validation", fileRecord.validationResult + " — " + fileRecord.flagReasonText));
+        gridElement.appendChild(buildDetailItem("Order status", fileRecord.status));
+    }
+
+    return gridElement;
+
+}
+
+// builds one label/value pair
+function buildDetailItem(labelText, valueText, isFullWidth) {
+
+    var itemElement = document.createElement("div");
+    itemElement.className = "activity-item";
+
+    var labelElement = document.createElement("p");
+    labelElement.className = "profile-label";
+    labelElement.textContent = labelText;
+
+    var valueElement = document.createElement("p");
+    valueElement.className = "profile-value";
+    valueElement.textContent = valueText;
+
+    itemElement.appendChild(labelElement);
+    itemElement.appendChild(valueElement);
+
+    return itemElement;
+
+}
+
+
+/* --------------------------------------------------------------------------
+   16. EXPORT VIA SPREADSHEET (file log + audit log)
+   -------------------------------------------------------------------------- */
+
+// escapes one CSV field ly
+function escapeCsvField(rawValue) {
+
+    var textValue   = String(rawValue);
+    var needsQuotes = false;
+    var escapedText = "";
+    var charIndex;
+    var currentChar;
+
+    for (charIndex = 0; charIndex < textValue.length; charIndex++) {
+
+        currentChar = textValue[charIndex];
+
+        if (currentChar === "," || currentChar === '"' || currentChar === "\n" || currentChar === "\r") {
+            needsQuotes = true;
+        }
+
+        if (currentChar === '"') {
+            escapedText = escapedText + '"' + '"';
+        } else {
+            escapedText = escapedText + currentChar;
+        }
+
+    }
+
+    if (needsQuotes) {
+        return '"' + escapedText + '"';
+    }
+
+    return escapedText;
+
+}
+
+// builds the file log CSV text
+function buildCsv() {
+
+    var csvLinesList = createList();
+
+    var headerFieldsList = createList();
+    ListAppend(headerFieldsList, "File ID");
+    ListAppend(headerFieldsList, "Linked order");
+    ListAppend(headerFieldsList, "File name");
+    ListAppend(headerFieldsList, "Channel");
+    ListAppend(headerFieldsList, "Size (bytes)");
+    ListAppend(headerFieldsList, "Uploaded on");
+    ListAppend(headerFieldsList, "Validation");
+    ListAppend(headerFieldsList, "Flag reason");
+    ListAppend(headerFieldsList, "Order status");
+    ListAppend(headerFieldsList, "Disposed");
+    ListAppend(headerFieldsList, "Disposed on");
+    ListAppend(headerFieldsList, "Disposed by");
+
+    ListAppend(csvLinesList, JoinList(headerFieldsList, ","));
+
+    var totalCount = ListSize(filesList);
+    var index;
+
+    for (index = 0; index < totalCount; index++) {
+
+        var currentFile = ListGet(filesList, index);
+
+        var rowFieldsList = createList();
+        ListAppend(rowFieldsList, escapeCsvField(formatFileId(currentFile.fileId)));
+        ListAppend(rowFieldsList, escapeCsvField(currentFile.orderId));
+        ListAppend(rowFieldsList, escapeCsvField(currentFile.fileName));
+        ListAppend(rowFieldsList, escapeCsvField(currentFile.fileChannel));
+        ListAppend(rowFieldsList, escapeCsvField(currentFile.fileSize));
+        ListAppend(rowFieldsList, escapeCsvField(currentFile.dateAdded));
+        ListAppend(rowFieldsList, escapeCsvField(currentFile.fileDisposed ? "Disposed" : currentFile.validationResult));
+        ListAppend(rowFieldsList, escapeCsvField(currentFile.flagReasonText));
+        ListAppend(rowFieldsList, escapeCsvField(currentFile.status));
+        ListAppend(rowFieldsList, escapeCsvField(currentFile.fileDisposed ? "Yes" : "No"));
+        ListAppend(rowFieldsList, escapeCsvField(currentFile.dateDisposed));
+        ListAppend(rowFieldsList, escapeCsvField(currentFile.disposedBy));
+
+        ListAppend(csvLinesList, JoinList(rowFieldsList, ","));
+
+    }
+
+    return JoinList(csvLinesList, "\r\n");
+
+}
+
+// triggers a text file download
+function downloadCsv(csvContentsText, downloadFileName) {
+
+    var csvBlob      = new Blob(["\uFEFF" + csvContentsText], { type: "text/csv;charset=utf-8" });
+    var csvObjectUrl = URL.createObjectURL(csvBlob);
+
+    var downloadLink = document.createElement("a");
+    downloadLink.href = csvObjectUrl;
+    downloadLink.download = downloadFileName;
+
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+
+    URL.revokeObjectURL(csvObjectUrl);
+
+}
+
+// exports the file log button handler
+function exportFileLog() {
+
+    if (ListSize(filesList) === 0) {
+        showToast("Nothing to export yet", TOAST_KINDS.ERROR);
+        return;
+    }
+
+    downloadCsv(buildCsv(), "file-handling-log-" + todayAsInputValue() + ".csv");
+
+    showToast("File log exported", TOAST_KINDS.SUCCESS);
+
+}
+
+// exports the audit stack button handler
+function exportAuditLog() {
+
+    var totalCount = StackSize(auditStack);
+
+    if (totalCount === 0) {
+        showToast("No audit entries yet", TOAST_KINDS.ERROR);
+        return;
+    }
+
+    var csvLinesList = createList();
+
+    var headerFieldsList = createList();
+    ListAppend(headerFieldsList, "Timestamp");
+    ListAppend(headerFieldsList, "Action");
+    ListAppend(headerFieldsList, "Detail");
+
+    ListAppend(csvLinesList, JoinList(headerFieldsList, ","));
+
+    var offsetIndex;
+
+    for (offsetIndex = 0; offsetIndex < totalCount; offsetIndex++) {
+
+        var entryRecord = StackGetFromTop(auditStack, offsetIndex);
+
+        var rowFieldsList = createList();
+        ListAppend(rowFieldsList, escapeCsvField(entryRecord.entryTime));
+        ListAppend(rowFieldsList, escapeCsvField(entryRecord.actionType));
+        ListAppend(rowFieldsList, escapeCsvField(entryRecord.detailText));
+
+        ListAppend(csvLinesList, JoinList(rowFieldsList, ","));
+
+    }
+
+    downloadCsv(JoinList(csvLinesList, "\r\n"), "disposal-audit-log-" + todayAsInputValue() + ".csv");
+
+    showToast("Audit log exported", TOAST_KINDS.SUCCESS);
+
+}
+
+
+/* --------------------------------------------------------------------------
+   17. EVENTS
+   -------------------------------------------------------------------------- */
+
+document.getElementById("export-btn").addEventListener("click", exportFileLog);
+document.getElementById("save-btn").addEventListener("click", saveFile);
+document.getElementById("cancel-btn").addEventListener("click", closeFileModal);
+document.getElementById("modal-close").addEventListener("click", closeFileModal);
+document.getElementById("view-modal-close").addEventListener("click", closeViewModal);
+document.getElementById("view-modal-done").addEventListener("click", closeViewModal);
+
+searchInput.addEventListener("input", renderTable);
+
+orderIdInput.addEventListener("change", updateSelectedOrderChannel);
+
+window.addEventListener("storage", function (event) {
+    if (event.key !== "gsj_orders_snapshot") return;
+
+    syncFilesFromOrders();
+    var orders = getOrderSnapshot();
+
+    for (var fileIndex = 0; fileIndex < ListSize(filesList); fileIndex++) {
+        var fileRecord = ListGet(filesList, fileIndex);
+        var linkedOrder = null;
+
+        for (var orderIndex = 0; orderIndex < orders.length; orderIndex++) {
+            if (Number(orders[orderIndex].orderId) === Number(fileRecord.orderId)) {
+                linkedOrder = orders[orderIndex];
+                break;
+            }
+        }
+
+        if (!linkedOrder) continue;
+
+        fileRecord.status = linkedOrder.status;
+
+        if (linkedOrder.status === ORDER_STATUS.DONE && !fileRecord.fileDisposed) {
+            disposeFile(fileRecord.fileId, DISPOSAL_TRIGGERS.AUTO_ORDER_DONE);
+        }
+    }
+
+    populateOrderSelect();
+    renderTable();
+    renderStats();
+});
+
+
+// processes one selected or dropped file
+function processChosenFile(chosenFile) {
+
+    pickedFile = null;
+    pickedFileHeaderCheck = null;
+    isCheckingFile = false;
+
+    if (!chosenFile) {
+        resetFileDropUI();
+        return;
+    }
+
+    if (chosenFile.size > MAX_FILE_BYTES) {
+
+        filePicker.value = "";
+        resetFileDropUI();
+
+        showToast(
+            chosenFile.name + " is " + formatBytes(chosenFile.size) + ", over the size limit",
+            TOAST_KINDS.ERROR
+        );
+
+        return;
+
+    }
+
+    var chosenFileExtensionText = getExtension(chosenFile.name);
+
+    if (!arrayContainsValue(ALLOWED_EXTENSIONS, chosenFileExtensionText)) {
+
+        filePicker.value = "";
+        resetFileDropUI();
+
+        showToast(
+            chosenFile.name + " is not a supported file type (." + chosenFileExtensionText + ")",
+            TOAST_KINDS.ERROR
+        );
+
+        return;
+
+    }
+
+    pickedFile = chosenFile;
+    hRemoveClass(fileDrop, "input-invalid");
+    hRemoveClass(fileDrop, "btn-success");
+    hRemoveClass(fileDrop, "btn-danger");
+    hAddClass(fileDrop, "btn-secondary");
+    fileDrop.textContent = "Checking " + chosenFile.name + " ...";
+    fileStatus.textContent = "Checking file signature...";
+
+    isCheckingFile = true;
+
+    checkFileHeader(chosenFile, function (headerCheckResult) {
+
+        // ignores a stale, outdated pick
+        if (pickedFile !== chosenFile) {
+            return;
+        }
+
+        isCheckingFile = false;
+        pickedFileHeaderCheck = headerCheckResult;
+
+        if (headerCheckResult.headerIsValid) {
+            hRemoveClass(fileDrop, "btn-secondary");
+            hAddClass(fileDrop, "btn-success");
+            fileDrop.textContent = chosenFile.name + " has been chosen";
+            fileStatus.textContent = formatBytes(chosenFile.size);
+        } else {
+            hRemoveClass(fileDrop, "btn-secondary");
+            hAddClass(fileDrop, "btn-danger");
+            fileDrop.textContent = chosenFile.name + " is invalid";
+            fileStatus.textContent = headerCheckResult.headerReasonText;
+            showToast("Scan found: " + headerCheckResult.headerReasonText, TOAST_KINDS.WARNING);
+        }
+
+    });
+
+}
+
+// accepts a selected file
+filePicker.addEventListener("change", function () {
+    processChosenFile(filePicker.files[0] || null);
+});
+
+// accepts a dropped file without changing the stylesheet
+fileDrop.addEventListener("dragover", function (dragEvent) {
+    dragEvent.preventDefault();
+});
+
+fileDrop.addEventListener("drop", function (dropEvent) {
+
+    dropEvent.preventDefault();
+
+    var droppedFile = dropEvent.dataTransfer.files[0] || null;
+    processChosenFile(droppedFile);
+
+});
+
+
+// closes dialog on backdrop click
+fileModal.addEventListener("click", function (clickEvent) {
+
+    if (clickEvent.target === fileModal) {
+        closeFileModal();
+    }
+
+});
+
+viewModal.addEventListener("click", function (clickEvent) {
+
+    if (clickEvent.target === viewModal) {
+        closeViewModal();
+    }
+
+});
+
+
+// closes open dialog on Escape
+document.addEventListener("keydown", function (keyboardEvent) {
+
+    if (keyboardEvent.key === "Escape") {
+
+        if (!fileModal.hidden) {
+            closeFileModal();
+        } else if (!viewModal.hidden) {
+            closeViewModal();
+        }
+
+    }
+
+});
+
+
+// Enter key saves from text fields
+fileModal.addEventListener("keydown", function (keyboardEvent) {
+
+    var isTextField =
+        keyboardEvent.target.tagName === "INPUT" &&
+        keyboardEvent.target.type !== "checkbox" &&
+        keyboardEvent.target.type !== "file";
+
+    if (keyboardEvent.key === "Enter" && isTextField) {
+        keyboardEvent.preventDefault();
+        saveFile();
+    }
+
+});
+
+
+/* --------------------------------------------------------------------------
+   18. START
+   -------------------------------------------------------------------------- */
+
+syncFilesFromOrders();
+populateChannelSelect();  // channel options come from ORDER_CHANNELS only
+populateOrderSelect();
+renderTable();
+renderStats();
+renderAuditLog();
+    </script>
+
+</body>
+
+</html>
